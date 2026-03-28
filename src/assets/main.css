@@ -1,0 +1,12 @@
+@import './base.css';
+
+#app {
+  min-height: 100vh;
+  font-weight: 400;
+}
+
+@media (max-width: 1024px) {
+  #app {
+    padding: 0 0 calc(4.8rem + env(safe-area-inset-bottom));
+  }
+}
