@@ -18,7 +18,7 @@
       </div>
 
       <PostFeed
-        :posts="hotPosts"
+        :posts="visiblePosts"
         :loading="socialStore.loading"
         :commenting="socialStore.commenting"
         :deleting-post-id="socialStore.deletingPostId"
@@ -27,6 +27,11 @@
         @add-comment="handleComment"
         @delete-post="handleDeletePost"
       />
+
+      <div ref="loadMoreTrigger" class="discover-load-trigger" aria-hidden="true"></div>
+      <button v-if="hasMore" class="load-more-btn" type="button" @click="loadMore">
+        {{ uiStore.t('exploreLoadMore') }}
+      </button>
     </section>
 
     <template #sidebar>
@@ -55,7 +60,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   experienceKeywords,
   helpKeywords,
@@ -163,25 +168,113 @@ const getHeatScore = (post) => {
   return Math.max(rawHeat - decay, 0)
 }
 
+const RANK_POOL = 60
+
 const hotPosts = computed(() =>
-  [...socialStore.posts].sort((a, b) => {
-    const viewerStage = normalizeStage(authStore.currentUser?.role)
-    const scoreA =
-      getHeatScore(a) * 0.4 +
-      getStageMatchScore(viewerStage, getPostStage(a)) * 12 * 0.35 +
-      getHelpScore(viewerStage, a, getPostStage(a)) * 12 * 0.25
-    const scoreB =
-      getHeatScore(b) * 0.4 +
-      getStageMatchScore(viewerStage, getPostStage(b)) * 12 * 0.35 +
-      getHelpScore(viewerStage, b, getPostStage(b)) * 12 * 0.25
+  [...socialStore.posts]
+    .sort((a, b) => {
+      const viewerStage = normalizeStage(authStore.currentUser?.role)
+      const scoreA =
+        getHeatScore(a) * 0.4 +
+        getStageMatchScore(viewerStage, getPostStage(a)) * 12 * 0.35 +
+        getHelpScore(viewerStage, a, getPostStage(a)) * 12 * 0.25
+      const scoreB =
+        getHeatScore(b) * 0.4 +
+        getStageMatchScore(viewerStage, getPostStage(b)) * 12 * 0.35 +
+        getHelpScore(viewerStage, b, getPostStage(b)) * 12 * 0.25
 
-    if (scoreA !== scoreB) {
-      return scoreB - scoreA
-    }
+      if (scoreA !== scoreB) {
+        return scoreB - scoreA
+      }
 
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  })
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+    .slice(0, RANK_POOL)
 )
+
+const INITIAL_POSTS = 8
+const LOAD_STEP = 6
+const visibleCount = ref(INITIAL_POSTS)
+const loadMoreTrigger = ref(null)
+let loadMoreObserver = null
+
+const visiblePosts = computed(() => hotPosts.value.slice(0, visibleCount.value))
+const hasMore = computed(() => visibleCount.value < hotPosts.value.length)
+
+const ensureVisibleCountWithinBounds = (nextList = []) => {
+  const minimum = Math.min(nextList.length, INITIAL_POSTS)
+  const maximum = nextList.length || INITIAL_POSTS
+
+  if (visibleCount.value < minimum) {
+    visibleCount.value = minimum
+  } else if (visibleCount.value > maximum) {
+    visibleCount.value = maximum
+  }
+}
+
+const loadMore = () => {
+  if (!hasMore.value) {
+    return
+  }
+
+  visibleCount.value = Math.min(
+    hotPosts.value.length,
+    visibleCount.value + LOAD_STEP
+  )
+}
+
+const setupIntersectionLoad = () => {
+  if (typeof IntersectionObserver === 'undefined' || !loadMoreTrigger.value) {
+    return
+  }
+
+  loadMoreObserver = new IntersectionObserver(
+    (entries) => {
+      const shouldLoad = entries.some((entry) => entry.isIntersecting)
+
+      if (shouldLoad) {
+        loadMore()
+      }
+    },
+    {
+      rootMargin: '120px 0px'
+    }
+  )
+
+  loadMoreObserver.observe(loadMoreTrigger.value)
+}
+
+const teardownIntersectionLoad = () => {
+  if (loadMoreObserver) {
+    loadMoreObserver.disconnect()
+    loadMoreObserver = null
+  }
+}
+
+watch(
+  hotPosts,
+  (next) => {
+    ensureVisibleCountWithinBounds(next)
+  },
+  { immediate: true }
+)
+
+watch(
+  loadMoreTrigger,
+  () => {
+    teardownIntersectionLoad()
+    setupIntersectionLoad()
+  },
+  { flush: 'post' }
+)
+
+onMounted(() => {
+  setupIntersectionLoad()
+})
+
+onBeforeUnmount(() => {
+  teardownIntersectionLoad()
+})
 
 const handleComment = async (postId, payload) => {
   await socialStore.commentOnPost(postId, payload)
@@ -215,6 +308,35 @@ const handleDeletePost = async (postId) => {
 .discover-panel {
   padding: 0;
   overflow: hidden;
+}
+
+.discover-load-trigger {
+  height: 1px;
+  width: 100%;
+}
+
+.load-more-btn {
+  display: block;
+  width: min(18rem, 100%);
+  margin: 0.5rem auto 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface-elevated);
+  color: var(--app-heading);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.load-more-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.06);
+}
+
+.load-more-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
 .discover-head {
@@ -267,6 +389,11 @@ const handleDeletePost = async (postId) => {
 
   .discover-panel {
     padding: 0;
+  }
+
+  .load-more-btn {
+    width: 100%;
+    margin: 0.25rem 0 0.65rem;
   }
 }
 </style>
