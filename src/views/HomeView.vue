@@ -40,7 +40,11 @@
       </div>
 
       <PostBox
+        :key="postBoxKey"
         :current-user="authStore.currentUser"
+        :draft-content="route.query.draftContent ? String(route.query.draftContent) : ''"
+        :draft-preset="route.query.draftPreset ? String(route.query.draftPreset) : ''"
+        :draft-topic="route.query.draftTopic ? String(route.query.draftTopic) : ''"
         :submitting="socialStore.publishing"
         @publish="handlePublish"
       />
@@ -105,6 +109,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import AppHeader from './AppHeader.vue'
 import AppShellLayout from './AppShellLayout.vue'
 import AuthPanel from './AuthPanel.vue'
@@ -118,10 +123,16 @@ import { useUiStore } from '@/stores/ui'
 const authStore = useAuthStore()
 const socialStore = useSocialStore()
 const uiStore = useUiStore()
+const route = useRoute()
 
 useSocialViewLifecycle(socialStore)
 
 const pageError = computed(() => socialStore.error)
+const postBoxKey = computed(() =>
+  [route.query.draftPreset || '', route.query.draftTopic || '', route.query.draftContent || ''].join(
+    '|'
+  )
+)
 const timelinePrimaryLabel = computed(() => (uiStore.locale === 'zh' ? '推荐' : 'For you'))
 const homeHighlights = computed(() => {
   const topicCounts = socialStore.posts.reduce((summary, post) => {

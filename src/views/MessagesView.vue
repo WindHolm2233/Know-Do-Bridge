@@ -1668,6 +1668,8 @@ const handleSend = async () => {
 .qq-sidebar__copy,
 .qq-chat__copy {
   min-width: 0;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
 }
 
 .qq-sidebar__copy strong,
@@ -1905,6 +1907,8 @@ const handleSend = async () => {
   line-height: 1.35;
   white-space: normal;
   overflow-wrap: anywhere;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1921,6 +1925,9 @@ const handleSend = async () => {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 255, 0.92)),
     var(--app-surface-elevated);
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  direction: ltr;
 }
 
 .qq-chat__header {
@@ -1984,6 +1991,9 @@ const handleSend = async () => {
     linear-gradient(90deg, rgba(29, 155, 240, 0.03) 1px, transparent 1px),
     linear-gradient(rgba(29, 155, 240, 0.03) 1px, transparent 1px);
   background-size: auto, 24px 24px, 24px 24px;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  direction: ltr;
 }
 
 .qq-chat__date-divider {
@@ -2034,6 +2044,10 @@ const handleSend = async () => {
   display: flex;
   align-items: flex-end;
   gap: 0.6rem;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  direction: ltr;
+  unicode-bidi: plaintext;
 }
 
 .qq-message-row--mine {
@@ -2051,6 +2065,11 @@ const handleSend = async () => {
   flex-direction: column;
   gap: 0.25rem;
   align-items: flex-start;
+  min-width: 0;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  direction: ltr;
+  unicode-bidi: plaintext;
 }
 
 .qq-message-row--mine .qq-message-group {
@@ -2061,34 +2080,56 @@ const handleSend = async () => {
   color: var(--app-text-soft);
   font-size: 0.78rem;
   font-weight: 600;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  direction: ltr;
 }
 
 .qq-message-bubble {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: fit-content;
   max-width: min(34rem, 78%);
   padding: 0.85rem 1rem;
   border: 1px solid var(--app-border);
   border-radius: 0.35rem 1.15rem 1.15rem 1.15rem;
   background: white;
   color: var(--app-heading);
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  direction: ltr !important;
+  unicode-bidi: plaintext;
+  line-height: 1.55;
 }
 
 .qq-message-bubble--mine {
   border-color: rgba(29, 155, 240, 0.2);
   border-radius: 1.15rem 0.35rem 1.15rem 1.15rem;
   background: rgba(29, 155, 240, 0.12);
+  align-self: flex-end;
 }
 
 .qq-message-bubble p {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  word-break: break-word;
+  word-break: normal;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  direction: ltr !important;
+  unicode-bidi: plaintext;
+  width: 100%;
 }
 
 .qq-message-time {
   color: var(--app-text-soft);
   font-size: 0.74rem;
   margin-top: 0.28rem;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  direction: ltr;
+  unicode-bidi: plaintext;
 }
 
 .qq-message {
@@ -2125,6 +2166,9 @@ const handleSend = async () => {
   padding: 1rem;
   border-top: 1px solid var(--app-border);
   background: rgba(255, 255, 255, 0.92);
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  direction: ltr;
 }
 
 .qq-composer > div:not(.qq-composer__field) {
@@ -2135,6 +2179,10 @@ const handleSend = async () => {
 
 .qq-composer__field {
   flex: 1;
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+  direction: ltr;
+  unicode-bidi: plaintext;
 }
 
 .qq-composer textarea {
@@ -2151,10 +2199,40 @@ const handleSend = async () => {
   resize: none;
   overflow-y: auto;
   overflow-wrap: anywhere;
+  word-break: break-word;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  direction: ltr !important;
+  unicode-bidi: plaintext;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease,
     background-color 160ms ease;
+}
+
+.qq-chat,
+.qq-chat__header,
+.qq-chat__history,
+.qq-chat__date-divider,
+.qq-chat__unread-divider,
+.qq-chat__empty,
+.qq-chat__empty-card,
+.qq-message-row,
+.qq-message-group,
+.qq-message-sender,
+.qq-message-bubble,
+.qq-message-bubble p,
+.qq-message-time,
+.qq-composer,
+.qq-composer__field,
+.qq-composer__meta,
+.qq-composer__hint,
+.qq-composer__count,
+.qq-composer__status {
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  direction: ltr !important;
+  unicode-bidi: plaintext;
 }
 
 .qq-composer__meta {
