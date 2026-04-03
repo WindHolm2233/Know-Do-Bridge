@@ -29,10 +29,12 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
   min-height: 100vh;
+  overflow-y: scroll;
   color: var(--app-text);
   background:
     radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.15), transparent 35%),
