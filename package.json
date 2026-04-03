@@ -1,1 +1,1 @@
-{"name": "Your Project Name","version": "1.0.0","description": "Your Project Description","main": "index.js","scripts": {"test": "echo 'Error: no test specified' && exit 1},"author": "WindHolm2233","license": "ISC"}
+{"name":"Your Project Name","version":"1.0.0","description":"Your Project Description","main":"index.js","scripts":{"test":"echo 'Error: no test specified' && exit 1"},"author":"WindHolm2233","license":"ISC"}

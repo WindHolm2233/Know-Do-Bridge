@@ -99,7 +99,7 @@
         @sign-out="authStore.signOut"
       />
 
-      <section class="page-panel push-panel">
+      <section class="page-panel push-panel push-panel--expanded">
         <div class="push-panel__head">
           <div>
             <p class="push-panel__eyebrow">{{ localeText.pushEyebrow }}</p>
@@ -143,12 +143,6 @@
         </div>
       </section>
 
-      <section class="page-panel list-panel">
-        <article v-for="item in exploreItems" :key="item" class="list-item">
-          <small>{{ uiStore.t('navExplore') }}</small>
-          <strong>{{ item }}</strong>
-        </article>
-      </section>
     </template>
   </AppShellLayout>
 </template>
@@ -179,12 +173,6 @@ const selectedLens = ref('all')
 const visibleCount = ref(INITIAL_POSTS)
 const loadMoreTrigger = ref(null)
 let loadMoreObserver = null
-
-const exploreItems = computed(() => [
-  uiStore.t('exploreItem1'),
-  uiStore.t('exploreItem2'),
-  uiStore.t('exploreItem3')
-])
 
 const discovery = computed(() =>
   buildDiscoveryInsights(socialStore.posts, authStore.currentUser?.role, uiStore.locale)
@@ -680,38 +668,19 @@ const handleDeletePost = async (postId) => {
   font-size: 0.72rem;
 }
 
-.list-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-}
-
-.list-item {
-  padding-bottom: 0.9rem;
-  border-bottom: 1px solid var(--app-border);
-}
-
-.list-item:last-child {
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.list-item small {
-  display: block;
-  color: var(--app-text-soft);
-  margin-bottom: 0.2rem;
-}
-
-.list-item strong {
-  color: var(--app-heading);
-}
-
 .push-panel {
   position: relative;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   background:
     radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 28%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.96));
+}
+
+.push-panel--expanded {
+  flex: 1;
+  min-height: 0;
 }
 
 .push-panel::before {
@@ -745,7 +714,9 @@ const handleDeletePost = async (postId) => {
 }
 
 .push-stream {
+  flex: 1;
   display: grid;
+  align-content: start;
   gap: 0.7rem;
   margin-top: 1rem;
 }
