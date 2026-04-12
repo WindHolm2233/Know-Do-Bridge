@@ -12,19 +12,19 @@ const messagesStore = useMessagesStore()
 
 watch(
   () => authStore.currentUser?.id,
-  async (nextUserId) => {
+  (nextUserId) => {
     if (!nextUserId) {
       messagesStore.stopRealtime()
-      await messagesStore.loadMessages('')
+      messagesStore.hydrateMessages('')
       return
     }
 
-    await messagesStore.loadMessages(nextUserId)
+    messagesStore.hydrateMessages(nextUserId)
   },
   { immediate: true }
 )
 
-onMounted(async () => {
-  await authStore.loadCurrentUser()
+onMounted(() => {
+  authStore.loadCurrentUser()
 })
 </script>

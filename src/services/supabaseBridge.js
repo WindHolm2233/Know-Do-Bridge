@@ -11,7 +11,9 @@ const supabaseConfig = {
   directMessagesChannel: import.meta.env.VITE_SUPABASE_DM_CHANNEL || 'realtime:campus-direct-messages'
 }
 
+const hasSupabaseCredentials = Boolean(supabaseConfig.url && supabaseConfig.anonKey)
 let supabaseClient = null
+let supabaseClientPromise = null
 
 export const getSupabaseConfig = () => ({ ...supabaseConfig })
 
@@ -22,5 +24,27 @@ export const registerSupabaseClient = (client) => {
 
 export const getSupabaseClient = () => supabaseClient
 
-export const canUseSupabase = () =>
-  Boolean(supabaseClient && supabaseConfig.url && supabaseConfig.anonKey)
+export const ensureSupabaseClient = async () => {
+  if (!hasSupabaseCredentials) {
+    return null
+  }
+
+  if (supabaseClient) {
+    return supabaseClient
+  }
+
+  if (!supabaseClientPromise) {
+    supabaseClientPromise = import('@supabase/supabase-js')
+      .then(({ createClient }) =>
+        registerSupabaseClient(createClient(supabaseConfig.url, supabaseConfig.anonKey))
+      )
+      .catch((error) => {
+        supabaseClientPromise = null
+        throw error
+      })
+  }
+
+  return supabaseClientPromise
+}
+
+export const canUseSupabase = () => hasSupabaseCredentials

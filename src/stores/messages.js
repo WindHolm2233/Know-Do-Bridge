@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import {
   fetchDirectMessages,
   fetchDirectMessageReads,
+  getCachedDirectMessages,
   sendDirectMessage,
   subscribeToDirectMessages,
   upsertDirectMessageRead
@@ -226,6 +227,20 @@ export const useMessagesStore = defineStore('messages', () => {
     })()
 
     return loadPromise
+  }
+
+  const hydrateMessages = (currentUserId) => {
+    if (!currentUserId) {
+      items.value = []
+      loadedUserId.value = ''
+      loadedAt.value = 0
+      return items.value
+    }
+
+    items.value = sortMessages(getCachedDirectMessages(currentUserId))
+    loadedUserId.value = currentUserId
+    loadedAt.value = 0
+    return items.value
   }
 
   const startRealtime = (currentUserId) => {
@@ -495,6 +510,7 @@ export const useMessagesStore = defineStore('messages', () => {
     getLastActiveThreadId,
     getUnreadThreadCount,
     getThreadsForUser,
+    hydrateMessages,
     getPendingReplyCount,
     isRealtimeActive,
     items,

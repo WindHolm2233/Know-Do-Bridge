@@ -1,5 +1,6 @@
 import {
   canUseSupabase,
+  ensureSupabaseClient,
   getSupabaseClient,
   getSupabaseConfig
 } from '@/services/supabaseBridge'
@@ -89,6 +90,14 @@ const mergeReadStates = (...collections) => {
 
 const filterReadStatesForUser = (entries, currentUserId) =>
   entries.filter((entry) => entry.userId === currentUserId)
+
+export const getCachedDirectMessages = (currentUserId) => {
+  if (!currentUserId) {
+    return []
+  }
+
+  return filterMessagesForUser(localMessages, currentUserId)
+}
 
 const defaultLocalMessages = [
   normalizeMessage({
@@ -245,7 +254,7 @@ const notifyLocalSubscribers = () => {
 }
 
 const fetchSupabaseMessages = async (currentUserId) => {
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const { data, error } = await client
     .from(config.directMessagesTable)
@@ -277,7 +286,7 @@ const fetchSupabaseMessages = async (currentUserId) => {
 }
 
 const fetchSupabaseDirectMessageReads = async (currentUserId) => {
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const { data, error } = await client
     .from(config.directMessageReadsTable)
@@ -352,7 +361,7 @@ export const sendDirectMessage = async ({ sender, recipient, content }) => {
 
   if (canUseSupabase()) {
     try {
-      const client = getSupabaseClient()
+      const client = await ensureSupabaseClient()
       const config = getSupabaseConfig()
       const { data, error } = await client
         .from(config.directMessagesTable)
@@ -403,7 +412,7 @@ export const upsertDirectMessageRead = async ({ userId, peerId, lastReadAt }) =>
 
   if (canUseSupabase()) {
     try {
-      const client = getSupabaseClient()
+      const client = await ensureSupabaseClient()
       const config = getSupabaseConfig()
       const { data, error } = await client
         .from(config.directMessageReadsTable)
@@ -434,8 +443,9 @@ export const subscribeToDirectMessages = (currentUserId, callback) => {
     return () => {}
   }
 
-  if (canUseSupabase()) {
-    const client = getSupabaseClient()
+  const client = getSupabaseClient()
+
+  if (canUseSupabase() && client) {
     const config = getSupabaseConfig()
     let refreshPromise = null
     let shouldRefreshAgain = false

@@ -1,5 +1,6 @@
 import {
   canUseSupabase,
+  ensureSupabaseClient,
   getSupabaseClient,
   getSupabaseConfig
 } from '@/services/supabaseBridge'
@@ -110,7 +111,7 @@ const notifyLocalSubscribers = () => {
 }
 
 const getSupabaseAuthUser = async () => {
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const {
     data: { user },
     error
@@ -124,7 +125,7 @@ const getSupabaseAuthUser = async () => {
 }
 
 const getSupabaseProfile = async (userId) => {
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const { data, error } = await client
     .from(config.profilesTable)
@@ -144,7 +145,7 @@ const fetchSupabaseCommentsByPost = async (postIds) => {
     return new Map()
   }
 
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const { data, error } = await client
     .from(config.commentsTable)
@@ -171,7 +172,7 @@ const fetchSupabaseLikesByPost = async (postIds) => {
     return []
   }
 
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const { data, error } = await client
     .from('post_likes')
@@ -186,7 +187,7 @@ const fetchSupabaseLikesByPost = async (postIds) => {
 }
 
 const fetchSupabasePosts = async () => {
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const currentUser = await getSupabaseAuthUser().catch(() => null)
   const { data, error } = await client
@@ -218,7 +219,7 @@ const fetchSupabasePosts = async () => {
 }
 
 const ensureSupabasePostOwnership = async (postId, userId) => {
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const { data, error } = await client
     .from(config.postsTable)
@@ -248,7 +249,7 @@ export const fetchPosts = async () => {
 
 export const createPost = async (payload) => {
   if (canUseSupabase()) {
-    const client = getSupabaseClient()
+    const client = await ensureSupabaseClient()
     const config = getSupabaseConfig()
     const user = await getSupabaseAuthUser()
 
@@ -302,7 +303,7 @@ export const createPost = async (payload) => {
 
 export const togglePostLike = async (postId, nextLiked) => {
   if (canUseSupabase()) {
-    const client = getSupabaseClient()
+    const client = await ensureSupabaseClient()
     const user = await getSupabaseAuthUser()
 
     if (!user) {
@@ -350,7 +351,7 @@ export const togglePostLike = async (postId, nextLiked) => {
 
 export const addComment = async (postId, payload) => {
   if (canUseSupabase()) {
-    const client = getSupabaseClient()
+    const client = await ensureSupabaseClient()
     const config = getSupabaseConfig()
     const user = await getSupabaseAuthUser()
 
@@ -409,7 +410,7 @@ export const addComment = async (postId, payload) => {
 
 export const deletePost = async (postId, actorId = '') => {
   if (canUseSupabase()) {
-    const client = getSupabaseClient()
+    const client = await ensureSupabaseClient()
     const config = getSupabaseConfig()
     const user = await getSupabaseAuthUser()
 
@@ -468,8 +469,9 @@ export const deletePost = async (postId, actorId = '') => {
 }
 
 export const subscribeToPosts = (callback) => {
-  if (canUseSupabase()) {
-    const client = getSupabaseClient()
+  const client = getSupabaseClient()
+
+  if (canUseSupabase() && client) {
     const config = getSupabaseConfig()
     let refreshPromise = null
     let shouldRefreshAgain = false

@@ -1,6 +1,6 @@
 import {
   canUseSupabase,
-  getSupabaseClient,
+  ensureSupabaseClient,
   getSupabaseConfig
 } from '@/services/supabaseBridge'
 import { createAppError } from '@/utils/appError'
@@ -85,7 +85,7 @@ const clearStoredLocalUser = () => {
 let localUser = readStoredLocalUser()
 
 const getProfileForUser = async (userId) => {
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const { data, error } = await client
     .from(config.profilesTable)
@@ -101,7 +101,7 @@ const getProfileForUser = async (userId) => {
 }
 
 const upsertProfileForUser = async ({ user, name, role }) => {
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const config = getSupabaseConfig()
   const fullName = name || user.user_metadata?.full_name || user.email || '用户'
   const headline = role || user.user_metadata?.headline || '大学生'
@@ -127,7 +127,7 @@ const upsertProfileForUser = async ({ user, name, role }) => {
 
 export const fetchCurrentUser = async () => {
   if (canUseSupabase()) {
-    const client = getSupabaseClient()
+    const client = await ensureSupabaseClient()
     const {
       data: { user },
       error
@@ -162,7 +162,7 @@ export const fetchCurrentUser = async () => {
 
 export const signInLocally = async (payload) => {
   if (canUseSupabase()) {
-    const client = getSupabaseClient()
+    const client = await ensureSupabaseClient()
     const emailRedirectTo = getEmailRedirectTo()
 
     if (payload.mode === 'signup') {
@@ -241,7 +241,7 @@ export const signInLocally = async (payload) => {
 
 export const signOutLocally = async () => {
   if (canUseSupabase()) {
-    const client = getSupabaseClient()
+    const client = await ensureSupabaseClient()
     const { error } = await client.auth.signOut()
 
     if (error) {
@@ -272,7 +272,7 @@ export const resendSignupConfirmation = async (email) => {
     })
   }
 
-  const client = getSupabaseClient()
+  const client = await ensureSupabaseClient()
   const emailRedirectTo = getEmailRedirectTo()
   const { error } = await client.auth.resend({
     type: 'signup',
