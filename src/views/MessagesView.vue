@@ -40,12 +40,12 @@
             <div class="qq-chat__date-divider"><span>{{ formatDateLabel(group.key) }}</span></div>
             <template v-for="(message, idx) in group.messages" :key="message.id">
               <div v-if="shouldShowUnreadDivider(message.id)" class="qq-chat__unread-divider"><span>{{ uiStore.t('messagesUnreadDivider') }}</span></div>
-              <div :class="['qq-message-row', { 'qq-message-row--mine': message.senderId === authStore.currentUser.id }]">
-                <div v-if="message.senderId !== authStore.currentUser.id" class="qq-message-avatar">{{ message.senderName.slice(0, 1).toUpperCase() }}</div>
-                <div v-else class="qq-message-avatar qq-message-avatar--spacer"></div>
+              <div :class="messageRowClass(message, idx, group.messages)">
+                <div v-if="message.senderId !== authStore.currentUser.id" :class="messageAvatarClass(message, idx, group.messages)">{{ message.senderName.slice(0, 1).toUpperCase() }}</div>
+                <div v-else :class="['qq-message-avatar', 'qq-message-avatar--spacer', { 'qq-message-avatar--hidden': isSameSenderAsNext(message, idx, group.messages) }]"></div>
                 <div class="qq-message-group">
                   <div v-if="shouldShowSenderInfo(message, idx, group.messages)" class="qq-message-sender">{{ message.senderName }}</div>
-                  <article :class="['qq-message-bubble', { 'qq-message-bubble--mine': message.senderId === authStore.currentUser.id }]">
+                  <article :class="messageBubbleClass(message, idx, group.messages)">
                     <p>{{ message.content }}</p><small class="qq-message-time">{{ formatClockTime(message.createdAt) }}</small>
                   </article>
                 </div>
@@ -110,10 +110,10 @@ const unreadThreadCount = computed(() => authStore.currentUser ? messagesStore.g
 const showSearchEmpty = computed(() => Boolean(normalizedThreadSearch.value) && !flatThreads.value.length && threads.value.length > 0)
 const draftLength = computed(() => draft.value.length)
 const draftRemaining = computed(() => MESSAGE_CHARACTER_LIMIT - draftLength.value)
-const sendingText = computed(() => uiStore.locale === 'zh' ? '正在发送...' : 'Sending...')
-const mobileThreadLabel = computed(() => uiStore.locale === 'zh' ? '会话' : 'Chats')
-const allChatsTitle = computed(() => uiStore.locale === 'zh' ? '全部会话' : 'All chats')
-const composerHint = computed(() => uiStore.locale === 'zh' ? 'Enter 发送，Shift + Enter 换行' : 'Press Enter to send, Shift + Enter for a new line')
+const sendingText = computed(() => uiStore.locale === 'zh' ? '\u6b63\u5728\u53d1\u9001...' : 'Sending...')
+const mobileThreadLabel = computed(() => uiStore.locale === 'zh' ? '\u4f1a\u8bdd' : 'Chats')
+const allChatsTitle = computed(() => uiStore.locale === 'zh' ? '\u5168\u90e8\u4f1a\u8bdd' : 'All chats')
+const composerHint = computed(() => uiStore.locale === 'zh' ? 'Enter \u53d1\u9001\uff0cShift + Enter \u6362\u884c' : 'Press Enter to send, Shift + Enter for a new line')
 const currentUserAvatar = computed(() => authStore.currentUser?.avatar || authStore.currentUser?.name?.slice(0, 1)?.toUpperCase() || 'U')
 const currentDraftKey = computed(() => {
   if (!authStore.currentUser?.id) return ''
@@ -139,11 +139,35 @@ function groupMessagesByDate(messages) {
   return groups
 }
 function shouldShowSenderInfo(message, index, messages) { return message.senderId !== authStore.currentUser?.id && (index === 0 || messages[index - 1]?.senderId !== message.senderId) }
+function isSameSenderAsPrev(message, index, messages) { return index > 0 && messages[index - 1]?.senderId === message.senderId }
+function isSameSenderAsNext(message, index, messages) { return index < messages.length - 1 && messages[index + 1]?.senderId === message.senderId }
+function messageRowClass(message, index, messages) {
+  return [
+    'qq-message-row',
+    {
+      'qq-message-row--mine': message.senderId === authStore.currentUser?.id,
+      'qq-message-row--grouped': isSameSenderAsPrev(message, index, messages)
+    }
+  ]
+}
+function messageAvatarClass(message, index, messages) {
+  return ['qq-message-avatar', { 'qq-message-avatar--hidden': isSameSenderAsNext(message, index, messages) }]
+}
+function messageBubbleClass(message, index, messages) {
+  return [
+    'qq-message-bubble',
+    {
+      'qq-message-bubble--mine': message.senderId === authStore.currentUser?.id,
+      'qq-message-bubble--tail-hidden': isSameSenderAsNext(message, index, messages),
+      'qq-message-bubble--compact': isSameSenderAsPrev(message, index, messages)
+    }
+  ]
+}
 function formatDateLabel(dateKey) {
   const date = new Date(`${dateKey}T00:00:00`); const today = new Date(); const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
   const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime(); const previousDay = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()).getTime(); const targetDay = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
-  if (targetDay === currentDay) return uiStore.locale === 'zh' ? '今天' : 'Today'
-  if (targetDay === previousDay) return uiStore.locale === 'zh' ? '昨天' : 'Yesterday'
+  if (targetDay === currentDay) return uiStore.locale === 'zh' ? '\u4eca\u5929' : 'Today'
+  if (targetDay === previousDay) return uiStore.locale === 'zh' ? '\u6628\u5929' : 'Yesterday'
   return date.toLocaleDateString(uiStore.locale === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined })
 }
 function formatThreadTime(value) {
@@ -155,7 +179,7 @@ function formatThreadTime(value) {
 }
 function formatMessageTime(value) { return new Date(value).toLocaleString(uiStore.locale === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) }
 function formatClockTime(value) { return new Date(value).toLocaleTimeString(uiStore.locale === 'zh' ? 'zh-CN' : 'en-US', { hour: '2-digit', minute: '2-digit' }) }
-function buildThreadPreview(thread) { return thread.latestMessage.senderId === authStore.currentUser?.id ? `${uiStore.locale === 'zh' ? '我: ' : 'You: '}${thread.latestMessage.content}` : thread.latestMessage.content }
+function buildThreadPreview(thread) { return thread.latestMessage.senderId === authStore.currentUser?.id ? `${uiStore.locale === 'zh' ? '\u6211: ' : 'You: '}${thread.latestMessage.content}` : thread.latestMessage.content }
 function matchesThreadSearch(thread) { return [thread.counterpart.name, thread.counterpart.role, thread.latestMessage.content, thread.latestMessage.senderName].join(' ').toLowerCase().includes(normalizedThreadSearch.value) }
 function getFirstUnreadMessageId(thread) {
   if (!thread?.lastReadAt || !authStore.currentUser?.id) return ''
@@ -211,5 +235,616 @@ async function handleSend() {
 </script>
 
 <style scoped>
-.messages-auth-state{margin:1rem}.messages-auth-state__card,.qq-shell{border:1px solid var(--app-border);border-radius:22px;background:var(--app-surface-elevated)}.messages-auth-state__card{padding:1.2rem}.messages-auth-state__card h3,.qq-chat__empty-card h3{color:var(--app-heading);font-size:1.15rem;font-weight:800}.messages-auth-state__card p,.qq-group__empty,.qq-search-empty,.qq-chat__copy small,.qq-chat__empty-card p,.qq-composer__meta small,.qq-composer__status,.qq-message-time,.qq-message-sender,.qq-thread__meta small,.qq-sidebar__copy small,.qq-sidebar__summary{color:var(--app-text-soft)}.status-banner{margin:1rem 1rem 0;padding:.9rem 1rem;border:1px solid rgba(244,33,46,.16);border-radius:12px;background:rgba(244,33,46,.08);color:var(--app-danger)}.qq-shell{display:grid;grid-template-columns:minmax(300px,340px) minmax(0,1fr);margin:1rem;min-height:calc(100vh - 8.5rem);overflow:hidden}.qq-shell,.qq-shell *{writing-mode:horizontal-tb;text-orientation:mixed}.qq-sidebar{display:flex;flex-direction:column;border-right:1px solid var(--app-border);background:linear-gradient(180deg,rgba(248,250,255,.98),rgba(255,255,255,.92))}.qq-sidebar__top,.qq-chat__header,.qq-composer{padding:1rem}.qq-sidebar__top{display:flex;align-items:center;justify-content:space-between;gap:.85rem;border-bottom:1px solid var(--app-border)}.qq-sidebar__identity,.qq-chat__identity{display:flex;align-items:center;gap:.75rem;min-width:0}.qq-sidebar__avatar,.qq-thread__avatar,.qq-chat__avatar,.qq-chat__empty-avatar,.qq-message-avatar{display:grid;place-items:center;border-radius:999px;background:linear-gradient(135deg,#1890ff,#6cb8ff);color:#fff;font-weight:800;flex-shrink:0}.qq-sidebar__avatar,.qq-chat__avatar{width:2.9rem;height:2.9rem}.qq-thread__avatar{width:2.8rem;height:2.8rem}.qq-message-avatar{width:2rem;height:2rem;font-size:.78rem}.qq-message-avatar--spacer{visibility:hidden}.qq-sidebar__copy,.qq-chat__copy,.qq-thread__body,.qq-message-group{min-width:0}.qq-sidebar__copy strong,.qq-chat__copy strong,.qq-thread__meta strong{display:block;color:var(--app-heading);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qq-chat__status-text,.qq-sidebar__copy small,.qq-thread__meta small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.qq-sidebar__unread,.qq-thread__badge{display:inline-grid;min-width:1.45rem;height:1.45rem;place-items:center;padding:0 .35rem;border-radius:999px;background:#ff4d4f;color:#fff;font-size:.72rem;font-weight:800}.qq-sidebar__toolbar{display:flex;gap:.6rem;padding:.9rem 1rem;border-bottom:1px solid var(--app-border)}.qq-sidebar__search{flex:1;min-width:0;padding:.75rem .95rem;border:1px solid var(--app-border);border-radius:999px;background:rgba(255,255,255,.96);color:var(--app-heading);outline:none}.qq-sidebar__search:focus,.qq-composer textarea:focus{border-color:rgba(24,144,255,.42);box-shadow:0 0 0 4px rgba(24,144,255,.12);background:#fff}.qq-sidebar__action{flex-shrink:0;padding:.75rem .95rem;border:1px solid var(--app-border);border-radius:999px;background:rgba(255,255,255,.96);color:var(--app-heading);font-weight:700}.qq-sidebar__action:disabled{opacity:.5;cursor:not-allowed}.qq-sidebar__summary{display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:0 1rem .85rem;font-size:.86rem;font-weight:700}.qq-sidebar__summary strong{color:var(--app-heading)}.qq-sidebar__groups{flex:1;padding:0 .55rem .65rem;overflow-y:auto}.qq-thread-stack{display:flex;flex-direction:column;gap:.45rem}.qq-thread{display:flex;align-items:center;gap:.75rem;width:100%;padding:.8rem;border:1px solid transparent;border-radius:18px;background:rgba(255,255,255,.94);text-align:left;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background-color .16s ease}.qq-thread:hover{transform:translateY(-1px);border-color:rgba(24,144,255,.18);box-shadow:0 10px 22px rgba(15,20,25,.07)}.qq-thread--active{border-color:rgba(24,144,255,.28);background:rgba(24,144,255,.08);box-shadow:0 12px 24px rgba(24,144,255,.1)}.qq-thread__meta,.qq-thread__preview,.qq-chat__meta,.qq-composer__meta{display:flex;align-items:center;justify-content:space-between;gap:.75rem}.qq-thread__preview{margin-top:.35rem;align-items:flex-start}.qq-thread__preview p{margin:0;color:var(--app-heading);line-height:1.4;display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;word-break:break-word}.qq-group__empty,.qq-search-empty{padding:1rem .5rem}.qq-chat{display:flex;flex-direction:column;min-width:0;background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(248,250,255,.94)),var(--app-surface-elevated)}.qq-chat__header{display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--app-border)}.qq-chat__back{display:none;flex-shrink:0;padding:.45rem .8rem;border:1px solid var(--app-border);border-radius:999px;background:rgba(255,255,255,.96);color:var(--app-heading);font-size:.78rem;font-weight:700}.qq-chat__meta{flex-direction:column;align-items:flex-end}.qq-chat__history{flex:1;padding:1rem;overflow-y:auto;background:linear-gradient(rgba(255,255,255,.75),rgba(255,255,255,.75)),linear-gradient(90deg,rgba(24,144,255,.03) 1px,transparent 1px),linear-gradient(rgba(24,144,255,.03) 1px,transparent 1px);background-size:auto,24px 24px,24px 24px}.qq-chat__date-divider,.qq-chat__unread-divider{display:flex;align-items:center;justify-content:center;gap:.75rem;margin:.7rem 0;color:var(--app-text-soft);font-size:.78rem;font-weight:700}.qq-chat__date-divider::before,.qq-chat__date-divider::after,.qq-chat__unread-divider::before,.qq-chat__unread-divider::after{content:'';flex:1;height:1px;background:var(--app-border)}.qq-chat__unread-divider{color:var(--app-accent)}.qq-message-row{display:flex;align-items:flex-end;gap:.6rem;margin-top:.55rem}.qq-message-row--mine{justify-content:flex-end}.qq-message-row--mine .qq-message-group{align-items:flex-end}.qq-message-group{display:flex;flex-direction:column;gap:.22rem;align-items:flex-start}.qq-message-sender{font-size:.76rem;font-weight:600}.qq-message-bubble{display:inline-flex;flex-direction:column;align-items:flex-start;width:fit-content;max-width:min(34rem,78%);padding:.8rem .95rem;border:1px solid rgba(15,20,25,.08);border-radius:.4rem 1rem 1rem 1rem;background:#fff;color:var(--app-heading);line-height:1.55;box-shadow:0 10px 22px rgba(15,20,25,.05);unicode-bidi:plaintext}.qq-message-bubble--mine{border-color:rgba(149,236,105,.55);border-radius:1rem .4rem 1rem 1rem;background:#95ec69;box-shadow:0 10px 22px rgba(115,193,79,.16)}.qq-message-bubble p{margin:0;white-space:pre-wrap;word-break:break-word}.qq-message-time{margin-top:.28rem;font-size:.72rem}.qq-chat__empty{display:grid;flex:1;place-items:center;padding:1.2rem}.qq-chat__empty-card{width:min(24rem,100%);padding:2rem 1.4rem;border:1px dashed rgba(15,20,25,.16);border-radius:24px;background:rgba(255,255,255,.88);text-align:center}.qq-chat__empty-avatar{width:4rem;height:4rem;margin:0 auto 1rem;border-radius:1.2rem}.qq-composer{display:flex;gap:.8rem;align-items:flex-end;border-top:1px solid var(--app-border);background:rgba(255,255,255,.95)}.qq-composer__field{flex:1;min-width:0}.qq-composer textarea{width:100%;min-height:5.5rem;max-height:15rem;padding:.9rem 1rem;border:1px solid var(--app-border);border-radius:20px;background:rgba(255,255,255,.96);color:var(--app-heading);line-height:1.5;outline:none;resize:none;overflow-y:auto;word-break:break-word}.qq-composer__meta{margin-top:.45rem}.qq-composer__count--warning{color:#b67c24}.qq-composer__status{display:block;margin-top:.35rem}.qq-composer button{min-width:6.2rem;padding:.9rem 1.25rem;border:none;border-radius:999px;background:linear-gradient(135deg,#1890ff,#51a8ff);color:#fff;font-weight:700;box-shadow:0 12px 22px rgba(24,144,255,.18)}.qq-composer button:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}@media (max-width:980px){.qq-shell{grid-template-columns:1fr;min-height:calc(100vh - 9rem)}.qq-shell--chat-open .qq-sidebar{display:none}.qq-shell:not(.qq-shell--chat-open) .qq-chat{display:none}.qq-sidebar{border-right:none}.qq-chat__back{display:inline-flex;align-items:center;justify-content:center}}@media (max-width:680px){.messages-auth-state,.status-banner,.qq-shell{margin:.75rem}.qq-shell{min-height:calc(100vh - 8.5rem)}.qq-sidebar__toolbar,.qq-chat__header,.qq-composer,.qq-composer__meta{flex-direction:column;align-items:stretch}.qq-chat__meta{align-items:flex-start}.qq-message-bubble{max-width:100%}.qq-composer button{width:100%}}
+.messages-auth-state {
+  margin: 1rem;
+}
+
+.messages-auth-state__card,
+.qq-shell {
+  border: 1px solid var(--app-border);
+  border-radius: 22px;
+  background: var(--app-surface-elevated);
+}
+
+.messages-auth-state__card {
+  padding: 1.2rem;
+}
+
+.messages-auth-state__card h3,
+.qq-chat__empty-card h3 {
+  color: var(--app-heading);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.messages-auth-state__card p,
+.qq-group__empty,
+.qq-search-empty,
+.qq-chat__copy small,
+.qq-chat__empty-card p,
+.qq-composer__meta small,
+.qq-composer__status,
+.qq-message-time,
+.qq-message-sender,
+.qq-thread__meta small,
+.qq-sidebar__copy small,
+.qq-sidebar__summary {
+  color: var(--app-text-soft);
+}
+
+.status-banner {
+  margin: 1rem 1rem 0;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(244, 33, 46, 0.16);
+  border-radius: 12px;
+  background: rgba(244, 33, 46, 0.08);
+  color: var(--app-danger);
+}
+
+.qq-shell {
+  display: grid;
+  grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+  margin: 1rem;
+  min-height: calc(100vh - 8.5rem);
+  overflow: hidden;
+}
+
+.qq-shell,
+.qq-shell * {
+  writing-mode: horizontal-tb;
+  text-orientation: mixed;
+}
+
+.qq-sidebar {
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--app-border);
+  background: linear-gradient(180deg, rgba(248, 250, 255, 0.98), rgba(255, 255, 255, 0.92));
+}
+
+.qq-sidebar__top,
+.qq-chat__header,
+.qq-composer {
+  padding: 1rem;
+}
+
+.qq-sidebar__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.qq-sidebar__identity,
+.qq-chat__identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.qq-sidebar__avatar,
+.qq-thread__avatar,
+.qq-chat__avatar,
+.qq-chat__empty-avatar,
+.qq-message-avatar {
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1890ff, #6cb8ff);
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.qq-sidebar__avatar,
+.qq-chat__avatar {
+  width: 2.9rem;
+  height: 2.9rem;
+}
+
+.qq-thread__avatar {
+  width: 2.8rem;
+  height: 2.8rem;
+}
+
+.qq-message-avatar {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.78rem;
+  transition: opacity 140ms ease;
+}
+
+.qq-message-avatar--spacer {
+  visibility: hidden;
+}
+
+.qq-message-avatar--hidden {
+  opacity: 0;
+}
+
+.qq-sidebar__copy,
+.qq-chat__copy,
+.qq-thread__body,
+.qq-message-group {
+  min-width: 0;
+}
+
+.qq-sidebar__copy strong,
+.qq-chat__copy strong,
+.qq-thread__meta strong {
+  display: block;
+  color: var(--app-heading);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qq-chat__status-text,
+.qq-sidebar__copy small,
+.qq-thread__meta small {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qq-sidebar__unread,
+.qq-thread__badge {
+  display: inline-grid;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  place-items: center;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.qq-sidebar__toolbar {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.qq-sidebar__search {
+  flex: 1;
+  min-width: 0;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--app-heading);
+  outline: none;
+}
+
+.qq-sidebar__search:focus,
+.qq-composer textarea:focus {
+  border-color: rgba(24, 144, 255, 0.42);
+  box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.12);
+  background: #fff;
+}
+
+.qq-sidebar__action {
+  flex-shrink: 0;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.qq-sidebar__action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qq-sidebar__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0 1rem 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.qq-sidebar__summary strong {
+  color: var(--app-heading);
+}
+
+.qq-sidebar__groups {
+  flex: 1;
+  padding: 0 0.55rem 0.65rem;
+  overflow-y: auto;
+}
+
+.qq-thread-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.qq-thread {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.8rem;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  text-align: left;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.qq-thread:hover {
+  transform: translateY(-1px);
+  border-color: rgba(24, 144, 255, 0.18);
+  box-shadow: 0 10px 22px rgba(15, 20, 25, 0.07);
+}
+
+.qq-thread--active {
+  border-color: rgba(24, 144, 255, 0.28);
+  background: rgba(24, 144, 255, 0.08);
+  box-shadow: 0 12px 24px rgba(24, 144, 255, 0.1);
+}
+
+.qq-thread__meta,
+.qq-thread__preview,
+.qq-chat__meta,
+.qq-composer__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.qq-thread__preview {
+  margin-top: 0.35rem;
+  align-items: flex-start;
+}
+
+.qq-thread__preview p {
+  margin: 0;
+  color: var(--app-heading);
+  line-height: 1.4;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  word-break: break-word;
+}
+
+.qq-group__empty,
+.qq-search-empty {
+  padding: 1rem 0.5rem;
+}
+
+.qq-chat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 255, 0.94)),
+    var(--app-surface-elevated);
+}
+
+.qq-chat__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.qq-chat__back {
+  display: none;
+  flex-shrink: 0;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--app-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.qq-chat__meta {
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.qq-chat__history {
+  flex: 1;
+  padding: 1rem;
+  overflow-y: auto;
+  background: linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.75)),
+    linear-gradient(90deg, rgba(24, 144, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(24, 144, 255, 0.03) 1px, transparent 1px);
+  background-size: auto, 24px 24px, 24px 24px;
+}
+
+.qq-chat__date-divider,
+.qq-chat__unread-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0.7rem 0;
+  color: var(--app-text-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.qq-chat__date-divider::before,
+.qq-chat__date-divider::after,
+.qq-chat__unread-divider::before,
+.qq-chat__unread-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--app-border);
+}
+
+.qq-chat__unread-divider {
+  color: var(--app-accent);
+}
+
+.qq-message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.62rem;
+  margin-top: 0.62rem;
+}
+
+.qq-message-row--grouped {
+  margin-top: 0.26rem;
+}
+
+.qq-message-row--mine {
+  justify-content: flex-end;
+}
+
+.qq-message-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  align-items: flex-start;
+  max-width: min(36rem, 76%);
+}
+
+.qq-message-row--mine .qq-message-group {
+  align-items: flex-end;
+}
+
+.qq-message-sender {
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.qq-message-bubble {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.74rem 0.95rem 0.56rem;
+  border: 1px solid rgba(15, 20, 25, 0.08);
+  border-radius: 1.05rem;
+  border-top-left-radius: 0.38rem;
+  background: #fff;
+  color: var(--app-heading);
+  line-height: 1.56;
+  box-shadow: 0 10px 22px rgba(15, 20, 25, 0.05);
+  unicode-bidi: plaintext;
+}
+
+.qq-message-bubble::after {
+  content: '';
+  position: absolute;
+  left: -0.36rem;
+  bottom: 0.52rem;
+  width: 0.62rem;
+  height: 0.62rem;
+  background: inherit;
+  border-left: 1px solid rgba(15, 20, 25, 0.08);
+  border-bottom: 1px solid rgba(15, 20, 25, 0.08);
+  transform: rotate(45deg);
+}
+
+.qq-message-bubble--mine {
+  align-items: flex-end;
+  border-color: rgba(149, 236, 105, 0.55);
+  border-radius: 1.05rem;
+  border-top-right-radius: 0.38rem;
+  background: #95ec69;
+  box-shadow: 0 10px 22px rgba(115, 193, 79, 0.16);
+}
+
+.qq-message-bubble--mine::after {
+  left: auto;
+  right: -0.36rem;
+  border-left: none;
+  border-bottom: none;
+  border-right: 1px solid rgba(106, 168, 77, 0.36);
+  border-top: 1px solid rgba(106, 168, 77, 0.36);
+}
+
+.qq-message-bubble--compact {
+  border-top-left-radius: 1.05rem;
+  border-top-right-radius: 1.05rem;
+}
+
+.qq-message-bubble--tail-hidden::after {
+  display: none;
+}
+
+.qq-message-bubble p {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.qq-message-time {
+  margin-top: 0.28rem;
+  font-size: 0.7rem;
+  line-height: 1;
+  opacity: 0.78;
+  align-self: flex-end;
+}
+
+.qq-message-bubble--mine .qq-message-time {
+  color: rgba(25, 45, 10, 0.75);
+}
+
+.qq-chat__empty {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  padding: 1.2rem;
+}
+
+.qq-chat__empty-card {
+  width: min(24rem, 100%);
+  padding: 2rem 1.4rem;
+  border: 1px dashed rgba(15, 20, 25, 0.16);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  text-align: center;
+}
+
+.qq-chat__empty-avatar {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1rem;
+  border-radius: 1.2rem;
+}
+
+.qq-composer {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-end;
+  border-top: 1px solid var(--app-border);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.qq-composer__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.qq-composer textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  max-height: 15rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--app-heading);
+  line-height: 1.5;
+  outline: none;
+  resize: none;
+  overflow-y: auto;
+  word-break: break-word;
+}
+
+.qq-composer__meta {
+  margin-top: 0.45rem;
+}
+
+.qq-composer__count--warning {
+  color: #b67c24;
+}
+
+.qq-composer__status {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.qq-composer button {
+  min-width: 6.2rem;
+  padding: 0.9rem 1.25rem;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1890ff, #51a8ff);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 12px 22px rgba(24, 144, 255, 0.18);
+}
+
+.qq-composer button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 980px) {
+  .qq-shell {
+    grid-template-columns: 1fr;
+    min-height: calc(100vh - 9rem);
+  }
+
+  .qq-shell--chat-open .qq-sidebar {
+    display: none;
+  }
+
+  .qq-shell:not(.qq-shell--chat-open) .qq-chat {
+    display: none;
+  }
+
+  .qq-sidebar {
+    border-right: none;
+  }
+
+  .qq-chat__back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 680px) {
+  .messages-auth-state,
+  .status-banner,
+  .qq-shell {
+    margin: 0.75rem;
+  }
+
+  .qq-shell {
+    min-height: calc(100vh - 8.5rem);
+  }
+
+  .qq-sidebar__toolbar,
+  .qq-chat__header,
+  .qq-composer,
+  .qq-composer__meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .qq-chat__meta {
+    align-items: flex-start;
+  }
+
+  .qq-message-group {
+    max-width: 100%;
+  }
+
+  .qq-message-bubble {
+    max-width: 100%;
+  }
+
+  .qq-composer button {
+    width: 100%;
+  }
+}
 </style>

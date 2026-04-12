@@ -39,7 +39,7 @@
           <small>{{ uiStore.t('exploreInsightTopics') }}</small>
           <div class="topic-badges">
             <span v-for="topic in discovery.topTopics" :key="topic.topic" class="topic-badge">
-              {{ topic.topic }} · {{ topic.count }}
+              {{ topic.topic }} | {{ topic.count }}
             </span>
           </div>
         </article>
@@ -125,6 +125,10 @@
         </button>
       </div>
 
+      <p v-if="pageError" class="status-banner status-banner--error">
+        {{ pageError }}
+      </p>
+
       <PostFeed
         :posts="visiblePosts"
         :loading="socialStore.loading"
@@ -162,7 +166,16 @@
           <div>
             <p class="push-panel__eyebrow">{{ uiStore.t('exploreQuickEyebrow') }}</p>
             <h3>{{ uiStore.t('exploreQuickTitle') }}</h3>
+            <p class="push-panel__subtitle">{{ pushPanelSummary }}</p>
           </div>
+          <button
+            v-if="activeChannel"
+            type="button"
+            class="push-panel__clear"
+            @click="clearSelectedChannel"
+          >
+            {{ uiStore.t('exploreTrackClear') }}
+          </button>
         </div>
 
         <div class="push-stream">
@@ -170,6 +183,12 @@
             v-for="(item, index) in pushChannels"
             :key="item.key"
             :class="['push-stream__card', { 'push-stream__card--active': activeChannel?.key === item.key }]"
+            role="button"
+            tabindex="0"
+            :aria-pressed="activeChannel?.key === item.key"
+            @click="applyPush(item)"
+            @keydown.enter.prevent="applyPush(item)"
+            @keydown.space.prevent="applyPush(item)"
           >
             <div class="push-stream__rail" aria-hidden="true">
               <span class="push-stream__dot"></span>
@@ -187,17 +206,20 @@
                     <strong>{{ item.label }}</strong>
                   </div>
                 </div>
-                <span class="push-stream__count">{{ item.count }}</span>
+                <span class="push-stream__count">{{ item.count }} {{ uiStore.t('postsInFeed') }}</span>
               </div>
+              <p v-if="activeChannel?.key === item.key" class="push-stream__selected">
+                {{ uiStore.t('exploreTrackSelected') }}
+              </p>
 
               <p class="push-stream__summary">{{ item.summary }}</p>
               <p class="push-stream__meta">{{ item.meta }}</p>
 
               <div class="push-stream__actions">
-                <button type="button" class="push-stream__button" @click="openDraftComposer(item)">
+                <button type="button" class="push-stream__button" @click.stop="openDraftComposer(item)">
                   {{ uiStore.t('exploreTrackCompose') }}
                 </button>
-                <button type="button" class="push-stream__ghost" @click="applyPush(item)">
+                <button type="button" class="push-stream__ghost" @click.stop="applyPush(item)">
                   {{ uiStore.t('exploreTrackOpen') }}
                 </button>
               </div>
@@ -241,75 +263,82 @@ let loadMoreObserver = null
 const discovery = computed(() =>
   buildDiscoveryInsights(socialStore.posts, authStore.currentUser?.role, uiStore.locale)
 )
+const pageError = computed(() => socialStore.error)
 
 const channelDefinitions = computed(() => [
   {
     key: 'exam_exchange',
+    priority: 1,
     label: uiStore.t('exploreItem1'),
     description: uiStore.t('exploreTrackDescription1'),
     keywords: [
-      '资料',
-      '笔记',
-      '复习',
-      '题库',
-      '考前',
-      '互换',
+      '\u8d44\u6599',
+      '\u7b14\u8bb0',
+      '\u590d\u4e60',
+      '\u9898\u5e93',
+      '\u8003\u524d',
+      '\u4e92\u6362',
+      '\u771f\u9898',
       'exchange',
       'revision',
       'notes',
       'exam',
-      '真题'
+      'paper'
     ],
     draftTopic: uiStore.t('exploreItem1'),
     draftContent:
       uiStore.locale === 'zh'
-        ? '想交换复习资料、笔记、真题或考前清单的同学可以在这里留言，写清课程、年级和你能提供的内容会更容易匹配到人。'
+        ? '\u7528\u8fd9\u6761\u5e16\u5b50\u4ea4\u6362\u590d\u4e60\u8d44\u6599\u3001\u7b14\u8bb0\u3001\u771f\u9898\u6216\u8003\u524d\u6e05\u5355\u3002\u5199\u6e05\u8bfe\u7a0b\u3001\u5e74\u7ea7\u548c\u4f60\u80fd\u63d0\u4f9b\u7684\u5185\u5bb9\uff0c\u66f4\u5bb9\u6613\u5339\u914d\u5230\u4eba\u3002'
         : 'Use this post to exchange revision notes, past papers, or exam prep checklists. Mention the course, level, and what you can share.'
   },
   {
     key: 'team_request',
+    priority: 2,
     label: uiStore.t('exploreItem2'),
     description: uiStore.t('exploreTrackDescription2'),
     keywords: [
-      '项目',
-      '比赛',
-      '组队',
-      '队友',
-      '合作',
+      '\u9879\u76ee',
+      '\u6bd4\u8d5b',
+      '\u7ec4\u961f',
+      '\u961f\u53cb',
+      '\u5408\u4f5c',
+      '\u62db\u52df',
+      '\u627e\u4eba',
       'team',
       'project',
       'hackathon',
       'competition',
-      '招募',
-      '找人'
+      'collaboration'
     ],
     draftTopic: uiStore.t('exploreItem2'),
     draftContent:
       uiStore.locale === 'zh'
-        ? '正在找项目搭子、比赛队友或技能互补的合作伙伴，欢迎留言说明方向、时间安排和你能负责的部分。'
+        ? '\u6b63\u5728\u627e\u9879\u76ee\u642d\u5b50\u3001\u6bd4\u8d5b\u961f\u53cb\u6216\u6280\u80fd\u4e92\u8865\u7684\u5408\u4f5c\u4f19\u4f34\uff1f\u53ef\u4ee5\u8bf4\u660e\u76ee\u6807\u3001\u65f6\u95f4\u5b89\u6392\u548c\u4f60\u80fd\u8d1f\u8d23\u7684\u90e8\u5206\u3002'
         : 'Looking for project collaborators or competition teammates. Share your goal, timing, and what you can contribute.'
   },
   {
     key: 'club_recruitment',
+    priority: 3,
     label: uiStore.t('exploreItem3'),
     description: uiStore.t('exploreTrackDescription3'),
     keywords: [
-      '社团',
-      '招新',
-      '纳新',
+      '\u793e\u56e2',
+      '\u62db\u65b0',
+      '\u7eb3\u65b0',
+      '\u62a5\u540d',
+      '\u6d3b\u52a8',
+      '\u7ebf\u4e0b',
+      '\u8bb2\u5ea7',
+      '\u5de5\u4f5c\u574a',
       'club',
-      '报名',
-      '活动',
-      '线下',
       'event',
       'offline',
-      '讲座',
-      '工作坊'
+      'meetup'
     ],
     draftTopic: uiStore.t('exploreItem3'),
     draftContent:
       uiStore.locale === 'zh'
-        ? '欢迎发布社团招新、活动报名、线下见面或校园活动预告，写清时间、地点和参与方式会更容易获得回应。'
+        ? '\u6b22\u8fce\u53d1\u5e03\u793e\u56e2\u62db\u65b0\u3001\u6d3b\u52a8\u62a5\u540d\u3001\u7ebf\u4e0b\u89c1\u9762\u6216\u6821\u56ed\u6d3b\u52a8\u9884\u544a\uff0c\u5199\u6e05\u65f6\u95f4\u3001\u5730\u70b9\u548c\u53c2\u4e0e\u65b9\u5f0f\uff0c\u66f4\u5bb9\u6613\u5f97\u5230\u56de\u590d\u3002'
         : 'Share club recruitment, event sign-ups, or offline meetups. Include the time, location, and how to join.'
   }
 ])
@@ -417,9 +446,23 @@ const rankedPosts = computed(() => {
   return channelRankedPosts.value.filter((post) => post.postType === targetType)
 })
 
-const pushChannels = computed(() => discoveryTracks.value)
+const pushChannels = computed(() =>
+  [...discoveryTracks.value].sort((left, right) => right.count - left.count || left.priority - right.priority)
+)
 const visiblePosts = computed(() => rankedPosts.value.slice(0, visibleCount.value))
 const hasMore = computed(() => visibleCount.value < rankedPosts.value.length)
+const pushPanelSummary = computed(() => {
+  if (activeChannel.value) {
+    return uiStore.locale === 'zh'
+      ? `当前已筛选：${activeChannel.value.label}（${channelRankedPosts.value.length} 条）`
+      : `Now filtered: ${activeChannel.value.label} (${channelRankedPosts.value.length})`
+  }
+
+  const total = pushChannels.value.reduce((sum, item) => sum + item.count, 0)
+  return uiStore.locale === 'zh'
+    ? `点击任意入口可快速筛选主内容流（共 ${total} 条）`
+    : `Tap any lane to filter the main feed quickly (${total} total posts)`
+})
 
 const bestMatchTitle = computed(() => {
   if (!discovery.value.bestPost) {
@@ -437,19 +480,19 @@ const bestMatchText = computed(() => {
   }
 
   return uiStore.locale === 'zh'
-    ? '这是当前最值得优先打开的一条内容。'
+    ? '\u8fd9\u662f\u5f53\u524d\u6700\u503c\u5f97\u4f18\u5148\u6253\u5f00\u7684\u4e00\u6761\u5185\u5bb9\u3002'
     : 'This is the strongest match to open with right now.'
 })
 
 const crossGradeText = computed(() => {
   if (!discovery.value.crossGradeOpportunities.length) {
     return uiStore.locale === 'zh'
-      ? '当前还没有明显的跨年级优先内容，换一个筛选再看看。'
+      ? '\u5f53\u524d\u8fd8\u6ca1\u6709\u660e\u663e\u7684\u8de8\u5e74\u7ea7\u4f18\u5148\u5185\u5bb9\uff0c\u53ef\u4ee5\u6362\u4e00\u4e2a\u7b5b\u9009\u518d\u770b\u770b\u3002'
       : 'No obvious cross-grade picks yet. Try a different filter.'
   }
 
   return uiStore.locale === 'zh'
-    ? '这些内容更容易把不同阶段的同学连接起来。'
+    ? '\u8fd9\u4e9b\u5185\u5bb9\u66f4\u5bb9\u6613\u628a\u4e0d\u540c\u9636\u6bb5\u7684\u540c\u5b66\u8fde\u63a5\u8d77\u6765\u3002'
     : 'These posts are more likely to connect students across stages.'
 })
 
@@ -921,6 +964,26 @@ const handleDeletePost = async (postId) => {
   min-height: 0;
 }
 
+.push-panel__subtitle {
+  margin-top: 0.38rem;
+  color: var(--app-text-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.push-panel__clear {
+  flex-shrink: 0;
+  min-height: 2.25rem;
+  padding: 0.5rem 0.86rem;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--app-primary-dark);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .push-panel::before {
   content: '';
   position: absolute;
@@ -944,9 +1007,19 @@ const handleDeletePost = async (postId) => {
   padding: 0.9rem 0.95rem;
   border: 1px solid rgba(37, 99, 235, 0.12);
   border-radius: 18px;
+  cursor: pointer;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(244, 248, 255, 0.96));
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.05);
+}
+
+.push-stream__card:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.4);
+  outline-offset: 2px;
+}
+
+.push-stream__card--active {
+  background: linear-gradient(180deg, rgba(238, 246, 255, 0.98), rgba(234, 245, 255, 0.96));
 }
 
 .push-stream__rail {
@@ -1003,6 +1076,13 @@ const handleDeletePost = async (postId) => {
   margin-top: 0.1rem;
   color: var(--app-heading);
   font-size: 0.98rem;
+  font-weight: 800;
+}
+
+.push-stream__selected {
+  margin-top: 0.35rem;
+  color: var(--app-primary-dark);
+  font-size: 0.76rem;
   font-weight: 800;
 }
 

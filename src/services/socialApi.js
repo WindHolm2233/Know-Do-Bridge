@@ -131,7 +131,7 @@ const getSupabaseProfile = async (userId) => {
     .from(config.profilesTable)
     .select('*')
     .eq('id', userId)
-    .single()
+    .maybeSingle()
 
   if (error) {
     throw createAppError('socialLoadCurrentProfile', error.message)
@@ -139,6 +139,16 @@ const getSupabaseProfile = async (userId) => {
 
   return data
 }
+
+const resolveAuthorName = (user, profile, fallback = '') =>
+  profile?.full_name ||
+  fallback ||
+  user?.user_metadata?.full_name ||
+  user?.email?.split('@')?.[0] ||
+  'User'
+
+const resolveAuthorRole = (user, profile, fallback = '') =>
+  profile?.headline || fallback || user?.user_metadata?.headline || ''
 
 const fetchSupabaseCommentsByPost = async (postIds) => {
   if (!postIds.length) {
@@ -218,24 +228,6 @@ const fetchSupabasePosts = async () => {
   )
 }
 
-const ensureSupabasePostOwnership = async (postId, userId) => {
-  const client = await ensureSupabaseClient()
-  const config = getSupabaseConfig()
-  const { data, error } = await client
-    .from(config.postsTable)
-    .select('id, author_id')
-    .eq('id', postId)
-    .maybeSingle()
-
-  if (error) {
-    throw createAppError('socialDeletePost', error.message)
-  }
-
-  if (!data || data.author_id !== userId) {
-    throw createAppError('socialDeletePostForbidden')
-  }
-}
-
 export const getDataMode = () => (canUseSupabase() ? 'supabase' : 'mock')
 
 export const fetchPosts = async () => {
@@ -261,8 +253,8 @@ export const createPost = async (payload) => {
 
     const insertPayload = {
       author_id: user.id,
-      author_name: profile.full_name || payload.author,
-      author_role: profile.headline || payload.role,
+      author_name: resolveAuthorName(user, profile, payload.author),
+      author_role: resolveAuthorRole(user, profile, payload.role),
       topic: payload.topic,
       content: payload.content
     }
@@ -364,8 +356,8 @@ export const addComment = async (postId, payload) => {
     const insertPayload = {
       post_id: postId,
       author_id: user.id,
-      author_name: profile.full_name || payload.author,
-      author_role: profile.headline || payload.role,
+      author_name: resolveAuthorName(user, profile, payload.author),
+      author_role: resolveAuthorRole(user, profile, payload.role),
       content: payload.content
     }
 
@@ -418,31 +410,20 @@ export const deletePost = async (postId, actorId = '') => {
       throw createAppError('socialRequireSignInDelete')
     }
 
-    await ensureSupabasePostOwnership(postId, user.id)
-
-    const { error: commentsError } = await client
-      .from(config.commentsTable)
-      .delete()
-      .eq('post_id', postId)
-
-    if (commentsError) {
-      throw createAppError('socialDeletePost', commentsError.message)
-    }
-
-    const { error: likesError } = await client.from('post_likes').delete().eq('post_id', postId)
-
-    if (likesError) {
-      throw createAppError('socialDeletePost', likesError.message)
-    }
-
-    const { error: postError } = await client
+    const { data, error: postError } = await client
       .from(config.postsTable)
       .delete()
       .eq('id', postId)
       .eq('author_id', user.id)
+      .select('id')
+      .maybeSingle()
 
     if (postError) {
       throw createAppError('socialDeletePost', postError.message)
+    }
+
+    if (!data) {
+      throw createAppError('socialDeletePostForbidden')
     }
 
     return
