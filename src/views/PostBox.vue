@@ -130,23 +130,32 @@ const props = defineProps({
 const emit = defineEmits(['publish'])
 const uiStore = useUiStore()
 
-const draftTemplates = {
+const draftTemplates = computed(() => ({
   team_request: {
-    topic: '组队请求',
-    content: '正在找队友/组队伙伴，欢迎私信或留言说明你的方向、时间和技能。'
+    topic: uiStore.t('exploreItem2'),
+    content:
+      uiStore.locale === 'zh'
+        ? '正在找项目搭子、比赛队友或技能互补的合作伙伴，欢迎留言说明方向、时间安排和你能负责的部分。'
+        : 'Looking for project collaborators or competition teammates. Share your goal, timing, and what you can contribute.'
   },
   club_recruitment: {
-    topic: '社团招新',
-    content: '欢迎分享社团招新信息、报名方式和活动亮点。'
+    topic: uiStore.t('exploreItem3'),
+    content:
+      uiStore.locale === 'zh'
+        ? '欢迎发布社团招新、活动报名、线下见面或校园活动预告，写清时间、地点和参与方式会更容易获得回应。'
+        : 'Share club recruitment, event sign-ups, or offline meetups. Include the time, location, and how to join.'
   },
   exam_exchange: {
-    topic: '考试资料交换',
-    content: '这里可以交换考试资料、笔记和复习清单。'
+    topic: uiStore.t('exploreItem1'),
+    content:
+      uiStore.locale === 'zh'
+        ? '想交换复习资料、笔记、真题或考前清单的同学可以在这里留言，写清课程、年级和你能提供的内容会更容易匹配到人。'
+        : 'Use this to exchange revision notes, past papers, and exam prep checklists. Mention the course, level, and what you can share.'
   }
-}
+}))
 
 const resolveInitialDraft = () => {
-  const template = draftTemplates[props.draftPreset] || {}
+  const template = draftTemplates.value[props.draftPreset] || {}
 
   return {
     content: props.draftContent.trim() || template.content || '',

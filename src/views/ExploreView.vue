@@ -46,7 +46,57 @@
       </div>
     </section>
 
-    <section class="page-panel discover-panel">
+    <section class="page-panel track-panel">
+      <div class="track-panel__head">
+        <div>
+          <p class="track-panel__eyebrow">{{ uiStore.t('exploreTracksTitle') }}</p>
+          <h2>{{ uiStore.t('exploreTracksTitle') }}</h2>
+          <p>{{ uiStore.t('exploreTracksSubtitle') }}</p>
+        </div>
+
+        <button
+          v-if="activeChannel"
+          type="button"
+          class="track-panel__clear"
+          @click="clearSelectedChannel"
+        >
+          {{ uiStore.t('exploreTrackClear') }}
+        </button>
+      </div>
+
+      <div class="track-grid">
+        <article
+          v-for="(item, index) in discoveryTracks"
+          :key="item.key"
+          :class="['track-card', { 'track-card--active': activeChannel?.key === item.key }]"
+        >
+          <div class="track-card__top">
+            <span class="track-card__index">0{{ index + 1 }}</span>
+            <span class="track-card__count">{{ item.count }} {{ uiStore.t('postsInFeed') }}</span>
+          </div>
+
+          <h3>{{ item.label }}</h3>
+          <p class="track-card__description">{{ item.description }}</p>
+          <p class="track-card__summary">{{ item.summary }}</p>
+
+          <div class="track-card__meta">
+            <span>{{ item.meta }}</span>
+            <strong v-if="activeChannel?.key === item.key">{{ uiStore.t('exploreTrackSelected') }}</strong>
+          </div>
+
+          <div class="track-card__actions">
+            <button type="button" class="track-card__button" @click="applyPush(item)">
+              {{ uiStore.t('exploreTrackOpen') }}
+            </button>
+            <button type="button" class="track-card__ghost" @click="openDraftComposer(item)">
+              {{ uiStore.t('exploreTrackCompose') }}
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section ref="discoverPanelRef" class="page-panel discover-panel">
       <div class="discover-head">
         <div>
           <h2>{{ uiStore.t('exploreHotTitle') }}</h2>
@@ -65,6 +115,14 @@
             <span class="filter-chip__count">{{ item.count }}</span>
           </button>
         </div>
+      </div>
+
+      <div v-if="activeChannel" class="discover-active-track">
+        <span>{{ uiStore.t('exploreTrackSelected') }}</span>
+        <strong>{{ activeChannel.label }}</strong>
+        <button type="button" @click="clearSelectedChannel">
+          {{ uiStore.t('exploreTrackClear') }}
+        </button>
       </div>
 
       <PostFeed
@@ -102,13 +160,17 @@
       <section class="page-panel push-panel push-panel--expanded">
         <div class="push-panel__head">
           <div>
-            <p class="push-panel__eyebrow">{{ localeText.pushEyebrow }}</p>
-            <h3>{{ localeText.pushTitle }}</h3>
+            <p class="push-panel__eyebrow">{{ uiStore.t('exploreQuickEyebrow') }}</p>
+            <h3>{{ uiStore.t('exploreQuickTitle') }}</h3>
           </div>
         </div>
 
         <div class="push-stream">
-          <article v-for="(item, index) in pushChannels" :key="item.key" class="push-stream__card">
+          <article
+            v-for="(item, index) in pushChannels"
+            :key="item.key"
+            :class="['push-stream__card', { 'push-stream__card--active': activeChannel?.key === item.key }]"
+          >
             <div class="push-stream__rail" aria-hidden="true">
               <span class="push-stream__dot"></span>
               <span v-if="index !== pushChannels.length - 1" class="push-stream__line"></span>
@@ -121,28 +183,28 @@
                     {{ index + 1 }}
                   </div>
                   <div>
-                    <p class="push-stream__eyebrow">{{ item.label }}</p>
-                    <strong>{{ item.title }}</strong>
+                    <p class="push-stream__eyebrow">{{ uiStore.t('navExplore') }}</p>
+                    <strong>{{ item.label }}</strong>
                   </div>
                 </div>
                 <span class="push-stream__count">{{ item.count }}</span>
               </div>
 
               <p class="push-stream__summary">{{ item.summary }}</p>
+              <p class="push-stream__meta">{{ item.meta }}</p>
 
               <div class="push-stream__actions">
                 <button type="button" class="push-stream__button" @click="openDraftComposer(item)">
-                  {{ item.actionLabel }}
+                  {{ uiStore.t('exploreTrackCompose') }}
                 </button>
                 <button type="button" class="push-stream__ghost" @click="applyPush(item)">
-                  {{ uiStore.locale === 'zh' ? '看这一类' : 'Filter this stream' }}
+                  {{ uiStore.t('exploreTrackOpen') }}
                 </button>
               </div>
             </div>
           </article>
         </div>
       </section>
-
     </template>
   </AppShellLayout>
 </template>
@@ -170,41 +232,172 @@ useSocialViewLifecycle(socialStore)
 const INITIAL_POSTS = 8
 const LOAD_STEP = 6
 const selectedLens = ref('all')
+const selectedChannel = ref('')
 const visibleCount = ref(INITIAL_POSTS)
 const loadMoreTrigger = ref(null)
+const discoverPanelRef = ref(null)
 let loadMoreObserver = null
 
 const discovery = computed(() =>
   buildDiscoveryInsights(socialStore.posts, authStore.currentUser?.role, uiStore.locale)
 )
 
-const localeText = computed(() =>
-  uiStore.locale === 'zh'
-    ? {
-        pushEyebrow: '推送入口',
-        pushTitle: '快速找到你要的内容',
-        pushRefresh: '换一条',
-        teamRequest: '组队请求',
-        clubRecruitment: '社团招新',
-        examExchange: '考试资料交换',
-        actionTeam: '看组队请求',
-        actionClub: '看招新内容',
-        actionExam: '看资料交换',
-        emptySummary: '先看看当前社区里有没有对应内容。'
-      }
-    : {
-        pushEyebrow: 'Quick push',
-        pushTitle: 'Jump into the right stream',
-        pushRefresh: 'Next',
-        teamRequest: 'Team requests',
-        clubRecruitment: 'Club recruitment',
-        examExchange: 'Exam materials',
-        actionTeam: 'Open team requests',
-        actionClub: 'Open club posts',
-        actionExam: 'Open materials exchange',
-        emptySummary: 'See what is available in the feed right now.'
-      }
+const channelDefinitions = computed(() => [
+  {
+    key: 'exam_exchange',
+    label: uiStore.t('exploreItem1'),
+    description: uiStore.t('exploreTrackDescription1'),
+    keywords: [
+      '资料',
+      '笔记',
+      '复习',
+      '题库',
+      '考前',
+      '互换',
+      'exchange',
+      'revision',
+      'notes',
+      'exam',
+      '真题'
+    ],
+    draftTopic: uiStore.t('exploreItem1'),
+    draftContent:
+      uiStore.locale === 'zh'
+        ? '想交换复习资料、笔记、真题或考前清单的同学可以在这里留言，写清课程、年级和你能提供的内容会更容易匹配到人。'
+        : 'Use this post to exchange revision notes, past papers, or exam prep checklists. Mention the course, level, and what you can share.'
+  },
+  {
+    key: 'team_request',
+    label: uiStore.t('exploreItem2'),
+    description: uiStore.t('exploreTrackDescription2'),
+    keywords: [
+      '项目',
+      '比赛',
+      '组队',
+      '队友',
+      '合作',
+      'team',
+      'project',
+      'hackathon',
+      'competition',
+      '招募',
+      '找人'
+    ],
+    draftTopic: uiStore.t('exploreItem2'),
+    draftContent:
+      uiStore.locale === 'zh'
+        ? '正在找项目搭子、比赛队友或技能互补的合作伙伴，欢迎留言说明方向、时间安排和你能负责的部分。'
+        : 'Looking for project collaborators or competition teammates. Share your goal, timing, and what you can contribute.'
+  },
+  {
+    key: 'club_recruitment',
+    label: uiStore.t('exploreItem3'),
+    description: uiStore.t('exploreTrackDescription3'),
+    keywords: [
+      '社团',
+      '招新',
+      '纳新',
+      'club',
+      '报名',
+      '活动',
+      '线下',
+      'event',
+      'offline',
+      '讲座',
+      '工作坊'
+    ],
+    draftTopic: uiStore.t('exploreItem3'),
+    draftContent:
+      uiStore.locale === 'zh'
+        ? '欢迎发布社团招新、活动报名、线下见面或校园活动预告，写清时间、地点和参与方式会更容易获得回应。'
+        : 'Share club recruitment, event sign-ups, or offline meetups. Include the time, location, and how to join.'
+  }
+])
+
+const getChannelDefinition = (channelKey) =>
+  channelDefinitions.value.find((item) => item.key === channelKey) || null
+
+const matchesChannel = (post, channelKey) => {
+  const channel = getChannelDefinition(channelKey)
+
+  if (!channel) {
+    return true
+  }
+
+  const haystack = `${post.topic || ''} ${post.content || ''}`.toLowerCase()
+  return channel.keywords.some((keyword) => haystack.includes(keyword.toLowerCase()))
+}
+
+const filterPostsByChannel = (posts, channelKey) =>
+  channelKey ? posts.filter((post) => matchesChannel(post, channelKey)) : posts
+
+const buildTrackSummary = (post, fallback) => {
+  if (!post) {
+    return fallback
+  }
+
+  const content = `${post.content || ''}`.trim().replace(/\s+/g, ' ')
+  return content.length > 96 ? `${content.slice(0, 96).trim()}...` : content
+}
+
+const discoveryTracks = computed(() =>
+  channelDefinitions.value.map((channel) => {
+    const matchedPosts = filterPostsByChannel(discovery.value.rankedPosts, channel.key)
+    const leadPost = matchedPosts[0] || null
+
+    return {
+      ...channel,
+      count: matchedPosts.length,
+      summary: buildTrackSummary(leadPost, channel.description),
+      meta: leadPost
+        ? `${leadPost.author} · ${leadPost.topic || formatPostTypeLabel(leadPost.postType, uiStore.locale)}`
+        : uiStore.t('exploreTrackEmpty')
+    }
+  })
 )
+
+const activeChannel = computed(() =>
+  discoveryTracks.value.find((item) => item.key === selectedChannel.value) || null
+)
+
+const channelRankedPosts = computed(() =>
+  filterPostsByChannel(discovery.value.rankedPosts, selectedChannel.value)
+)
+
+const channelTypeCounts = computed(() =>
+  channelRankedPosts.value.reduce((summary, post) => {
+    summary[post.postType] = (summary[post.postType] || 0) + 1
+    return summary
+  }, {})
+)
+
+const filterItems = computed(() => [
+  {
+    key: 'all',
+    label: uiStore.t('exploreFilterAll'),
+    count: channelRankedPosts.value.length
+  },
+  {
+    key: 'guidance',
+    label: uiStore.t('exploreFilterGuidance'),
+    count: channelTypeCounts.value.seek_guidance || 0
+  },
+  {
+    key: 'practice',
+    label: uiStore.t('exploreFilterPractice'),
+    count: channelTypeCounts.value.seek_practice || 0
+  },
+  {
+    key: 'experience',
+    label: uiStore.t('exploreFilterExperience'),
+    count: channelTypeCounts.value.share_experience || 0
+  },
+  {
+    key: 'discussion',
+    label: uiStore.t('exploreFilterDiscussion'),
+    count: channelTypeCounts.value.general || 0
+  }
+])
 
 const lensPostTypeMap = {
   all: '',
@@ -214,87 +407,17 @@ const lensPostTypeMap = {
   discussion: 'general'
 }
 
-const filterItems = computed(() => [
-  {
-    key: 'all',
-    label: uiStore.t('exploreFilterAll'),
-    count: discovery.value.totalPosts
-  },
-  {
-    key: 'guidance',
-    label: uiStore.t('exploreFilterGuidance'),
-    count: discovery.value.typeCounts.seek_guidance || 0
-  },
-  {
-    key: 'practice',
-    label: uiStore.t('exploreFilterPractice'),
-    count: discovery.value.typeCounts.seek_practice || 0
-  },
-  {
-    key: 'experience',
-    label: uiStore.t('exploreFilterExperience'),
-    count: discovery.value.typeCounts.share_experience || 0
-  },
-  {
-    key: 'discussion',
-    label: uiStore.t('exploreFilterDiscussion'),
-    count: discovery.value.typeCounts.general || 0
-  }
-])
-
-const channelKeywords = {
-  team_request: ['组队', '队友', 'team', '队伍', '合作', '招募队友', '拼队', '找人'],
-  club_recruitment: ['社团', '招新', '纳新', 'club', '报名', '招募成员', '活动招募'],
-  exam_exchange: ['资料', '笔记', '复习', '题库', '考前', '互换', 'exchange', '真题']
-}
-
-const channelLensMap = {
-  team_request: 'practice',
-  club_recruitment: 'discussion',
-  exam_exchange: 'experience'
-}
-
-const pushChannels = computed(() => {
-  const ranked = discovery.value.rankedPosts
-
-  return [
-    {
-      key: 'team_request',
-      label: localeText.value.teamRequest,
-      title: uiStore.locale === 'zh' ? '组队请求正在升温' : 'Team requests are active',
-      summary: findChannelSummary('team_request', ranked),
-      count: countChannelPosts('team_request', ranked),
-      actionLabel: localeText.value.actionTeam
-    },
-    {
-      key: 'club_recruitment',
-      label: localeText.value.clubRecruitment,
-      title: uiStore.locale === 'zh' ? '社团招新可以多看两眼' : 'Club recruitment is worth a look',
-      summary: findChannelSummary('club_recruitment', ranked),
-      count: countChannelPosts('club_recruitment', ranked),
-      actionLabel: localeText.value.actionClub
-    },
-    {
-      key: 'exam_exchange',
-      label: localeText.value.examExchange,
-      title: uiStore.locale === 'zh' ? '考试资料交换有新动态' : 'Exam materials are moving',
-      summary: findChannelSummary('exam_exchange', ranked),
-      count: countChannelPosts('exam_exchange', ranked),
-      actionLabel: localeText.value.actionExam
-    }
-  ]
-})
-
 const rankedPosts = computed(() => {
   const targetType = lensPostTypeMap[selectedLens.value]
 
   if (!targetType) {
-    return discovery.value.rankedPosts
+    return channelRankedPosts.value
   }
 
-  return discovery.value.rankedPosts.filter((post) => post.postType === targetType)
+  return channelRankedPosts.value.filter((post) => post.postType === targetType)
 })
 
+const pushChannels = computed(() => discoveryTracks.value)
 const visiblePosts = computed(() => rankedPosts.value.slice(0, visibleCount.value))
 const hasMore = computed(() => visibleCount.value < rankedPosts.value.length)
 
@@ -314,19 +437,19 @@ const bestMatchText = computed(() => {
   }
 
   return uiStore.locale === 'zh'
-    ? '这是当前最值得优先浏览的一条内容。'
+    ? '这是当前最值得优先打开的一条内容。'
     : 'This is the strongest match to open with right now.'
 })
 
 const crossGradeText = computed(() => {
   if (!discovery.value.crossGradeOpportunities.length) {
     return uiStore.locale === 'zh'
-      ? '当前没有明显的跨年级优先内容，换个筛选试试。'
+      ? '当前还没有明显的跨年级优先内容，换一个筛选再看看。'
       : 'No obvious cross-grade picks yet. Try a different filter.'
   }
 
   return uiStore.locale === 'zh'
-    ? '这些内容更容易把不同阶段的同学连起来。'
+    ? '这些内容更容易把不同阶段的同学连接起来。'
     : 'These posts are more likely to connect students across stages.'
 })
 
@@ -375,6 +498,16 @@ const teardownIntersectionLoad = () => {
   }
 }
 
+const scrollToDiscoverPanel = () => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.requestAnimationFrame(() => {
+    discoverPanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  })
+}
+
 watch(
   rankedPosts,
   (next) => {
@@ -384,6 +517,10 @@ watch(
 )
 
 watch(selectedLens, () => {
+  visibleCount.value = INITIAL_POSTS
+})
+
+watch(selectedChannel, () => {
   visibleCount.value = INITIAL_POSTS
 })
 
@@ -400,68 +537,23 @@ onMounted(() => {
   setupIntersectionLoad()
 })
 
-const findChannelSummary = (key, posts) => {
-  const keywords = channelKeywords[key] || []
-  const matched = posts.find((post) => {
-    const haystack = `${post.topic || ''} ${post.content || ''}`.toLowerCase()
-    return keywords.some((keyword) => haystack.includes(keyword.toLowerCase()))
-  })
-
-  if (!matched) {
-    return localeText.value.emptySummary
-  }
-
-  return `${matched.topic || formatPostTypeLabel(matched.postType, uiStore.locale)} · ${
-    matched.author
-  }`
-}
-
-const countChannelPosts = (key, posts) => {
-  const keywords = channelKeywords[key] || []
-
-  return posts.filter((post) => {
-    const haystack = `${post.topic || ''} ${post.content || ''}`.toLowerCase()
-    return keywords.some((keyword) => haystack.includes(keyword.toLowerCase()))
-  }).length
-}
-
 const applyPush = (item) => {
-  selectedLens.value = channelLensMap[item.key] || 'all'
+  selectedLens.value = 'all'
+  selectedChannel.value = selectedChannel.value === item.key ? '' : item.key
+  scrollToDiscoverPanel()
+}
+
+const clearSelectedChannel = () => {
+  selectedChannel.value = ''
 }
 
 const openDraftComposer = (item) => {
-  const draftTopic =
-    uiStore.locale === 'zh'
-      ? item.key === 'team_request'
-        ? '组队请求'
-        : item.key === 'club_recruitment'
-          ? '社团招新'
-          : '考试资料交换'
-      : item.key === 'team_request'
-        ? 'Team requests'
-        : item.key === 'club_recruitment'
-          ? 'Club recruitment'
-          : 'Exam materials'
-
-  const draftContent =
-    uiStore.locale === 'zh'
-      ? item.key === 'team_request'
-        ? '正在找队友/组队伙伴，欢迎私信或留言说明你的方向、时间和技能。'
-        : item.key === 'club_recruitment'
-          ? '欢迎分享社团招新信息、报名方式和活动亮点。'
-          : '这里可以交换考试资料、笔记和复习清单。'
-      : item.key === 'team_request'
-        ? 'Looking for teammates. Leave a comment or DM with your direction, timing, and skills.'
-        : item.key === 'club_recruitment'
-          ? 'Share club recruitment info, signup steps, and what makes the club interesting.'
-          : 'Use this for exchanging exam notes, materials, and revision lists.'
-
   router.push({
     path: '/',
     query: {
       draftPreset: item.key,
-      draftTopic,
-      draftContent
+      draftTopic: item.draftTopic,
+      draftContent: item.draftContent
     }
   })
 }
@@ -501,49 +593,76 @@ const handleDeletePost = async (postId) => {
     linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(245, 249, 255, 0.94));
 }
 
-.insight-panel__head {
+.insight-panel__head,
+.track-panel__head,
+.discover-head,
+.push-panel__head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
 }
 
-.insight-panel__eyebrow {
+.insight-panel__eyebrow,
+.track-panel__eyebrow,
+.push-panel__eyebrow {
   color: var(--app-accent);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.insight-panel__head h2 {
+.insight-panel__head h2,
+.track-panel__head h2,
+.discover-head h2,
+.push-panel__head h3 {
   color: var(--app-heading);
   font-size: 1.18rem;
   font-weight: 800;
 }
 
-.insight-panel__pill {
+.track-panel__head p:last-child,
+.discover-head p,
+.insight-card p,
+.push-stream__summary,
+.push-stream__meta,
+.track-card__description,
+.track-card__meta span {
+  color: var(--app-text-soft);
+}
+
+.track-panel__head p:last-child,
+.discover-head p {
+  margin-top: 0.35rem;
+}
+
+.insight-panel__pill,
+.track-card__count,
+.push-stream__count {
   flex-shrink: 0;
-  padding: 0.45rem 0.75rem;
+  padding: 0.32rem 0.6rem;
   border-radius: 999px;
   background: rgba(79, 105, 206, 0.08);
   color: var(--app-primary-dark);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
 }
 
-.insight-grid {
+.insight-grid,
+.track-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.85rem;
   margin-top: 1rem;
 }
 
-.insight-card {
+.insight-card,
+.track-card {
   padding: 0.95rem 1rem;
   border: 1px solid var(--app-border);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .insight-card small {
@@ -551,16 +670,17 @@ const handleDeletePost = async (postId) => {
   color: var(--app-text-soft);
 }
 
-.insight-card strong {
+.insight-card strong,
+.track-card h3 {
   display: block;
   margin-top: 0.35rem;
   color: var(--app-heading);
   font-size: 1.05rem;
+  font-weight: 800;
 }
 
 .insight-card p {
   margin-top: 0.35rem;
-  color: var(--app-text-soft);
   line-height: 1.55;
 }
 
@@ -580,9 +700,154 @@ const handleDeletePost = async (postId) => {
   font-weight: 700;
 }
 
+.track-panel__clear,
+.discover-active-track button,
+.track-card__button,
+.track-card__ghost,
+.filter-chip,
+.load-more-btn,
+.push-stream__button,
+.push-stream__ghost {
+  cursor: pointer;
+}
+
+.track-panel__clear {
+  flex-shrink: 0;
+  min-height: 2.45rem;
+  padding: 0.6rem 0.95rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--app-heading);
+  font-weight: 700;
+}
+
+.track-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 255, 0.94));
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+}
+
+.track-card--active,
+.push-stream__card--active {
+  border-color: rgba(37, 99, 235, 0.22);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.12);
+}
+
+.track-card__top,
+.track-card__meta,
+.push-stream__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.track-card__index {
+  color: var(--app-accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.track-card__description,
+.track-card__summary,
+.push-stream__summary {
+  line-height: 1.55;
+}
+
+.track-card__summary {
+  min-height: 4.8rem;
+  color: var(--app-heading);
+}
+
+.track-card__meta strong {
+  color: var(--app-primary-dark);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.track-card__actions,
+.push-stream__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: auto;
+}
+
+.track-card__button,
+.track-card__ghost,
+.push-stream__button,
+.push-stream__ghost {
+  min-height: 2.35rem;
+  padding: 0.58rem 0.88rem;
+  border-radius: 999px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.track-card__button,
+.push-stream__button {
+  border: none;
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  color: white;
+  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.18);
+}
+
+.track-card__ghost,
+.push-stream__ghost {
+  border: 1px solid rgba(37, 99, 235, 0.16);
+  background: rgba(37, 99, 235, 0.06);
+  color: var(--app-primary-dark);
+}
+
+.track-card__button:hover,
+.track-card__ghost:hover,
+.push-stream__button:hover,
+.push-stream__ghost:hover,
+.load-more-btn:hover {
+  transform: translateY(-1px);
+}
+
 .discover-panel {
   padding: 0;
   overflow: hidden;
+}
+
+.discover-active-track {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--app-border);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.discover-active-track span,
+.discover-active-track button {
+  color: var(--app-primary-dark);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.discover-active-track strong {
+  flex: 1;
+  min-width: 0;
+  color: var(--app-heading);
+}
+
+.discover-active-track button {
+  padding: 0;
+  border: none;
+  background: transparent;
 }
 
 .discover-load-trigger {
@@ -600,38 +865,12 @@ const handleDeletePost = async (postId) => {
   background: var(--app-surface-elevated);
   color: var(--app-heading);
   font-weight: 700;
-  cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
 
-.load-more-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.06);
-}
-
-.load-more-btn:active {
-  transform: translateY(0);
-  box-shadow: none;
-}
-
 .discover-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.9rem;
   padding: 1.1rem 1.1rem 0.85rem;
   border-bottom: 1px solid var(--app-border);
-}
-
-.discover-head h2 {
-  color: var(--app-heading);
-  font-size: 1.2rem;
-  font-weight: 800;
-}
-
-.discover-head p {
-  margin-top: 0.35rem;
-  color: var(--app-text-soft);
 }
 
 .filter-strip {
@@ -652,7 +891,6 @@ const handleDeletePost = async (postId) => {
   color: var(--app-text);
   font-size: 0.86rem;
   font-weight: 700;
-  cursor: pointer;
 }
 
 .filter-chip--active {
@@ -689,28 +927,6 @@ const handleDeletePost = async (postId) => {
   inset: 0 0 auto;
   height: 0.35rem;
   background: linear-gradient(90deg, #2563eb, #60a5fa, #22c55e);
-}
-
-.push-panel__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.85rem;
-}
-
-.push-panel__eyebrow {
-  margin-bottom: 0.2rem;
-  color: var(--app-accent);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.push-panel__head h3 {
-  color: var(--app-heading);
-  font-size: 1.08rem;
-  font-weight: 800;
 }
 
 .push-stream {
@@ -761,13 +977,6 @@ const handleDeletePost = async (postId) => {
   min-width: 0;
 }
 
-.push-stream__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.8rem;
-}
-
 .push-stream__identity {
   display: flex;
   align-items: flex-start;
@@ -789,14 +998,6 @@ const handleDeletePost = async (postId) => {
   box-shadow: 0 12px 22px rgba(37, 99, 235, 0.18);
 }
 
-.push-stream__eyebrow {
-  color: var(--app-accent);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .push-stream__identity strong {
   display: block;
   margin-top: 0.1rem;
@@ -805,73 +1006,20 @@ const handleDeletePost = async (postId) => {
   font-weight: 800;
 }
 
-.push-stream__count {
-  flex-shrink: 0;
-  padding: 0.28rem 0.55rem;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.1);
-  color: var(--app-primary-dark);
-  font-size: 0.74rem;
-  font-weight: 800;
-}
-
-.push-stream__summary {
-  margin-top: 0.5rem;
-  color: var(--app-text-soft);
-  line-height: 1.55;
-}
-
-.push-stream__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin-top: 0.8rem;
-}
-
-.push-stream__button,
-.push-stream__ghost {
-  min-height: 2.35rem;
-  padding: 0.58rem 0.88rem;
-  border-radius: 999px;
-  font-size: 0.84rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition:
-    transform 120ms ease,
-    box-shadow 120ms ease,
-    background-color 120ms ease,
-    border-color 120ms ease;
-}
-
-.push-stream__button {
-  border: none;
-  background: linear-gradient(135deg, #2563eb, #60a5fa);
-  color: white;
-  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.18);
-}
-
-.push-stream__ghost {
-  border: 1px solid rgba(37, 99, 235, 0.16);
-  background: rgba(37, 99, 235, 0.06);
-  color: var(--app-primary-dark);
-}
-
-.push-stream__button:hover,
-.push-stream__ghost:hover {
-  transform: translateY(-1px);
-}
-
-.push-stream__ghost:hover {
-  background: rgba(37, 99, 235, 0.1);
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.08);
+.push-stream__meta {
+  margin-top: 0.45rem;
+  font-size: 0.82rem;
 }
 
 @media (max-width: 860px) {
-  .insight-grid {
+  .insight-grid,
+  .track-grid {
     grid-template-columns: 1fr;
   }
 
-  .discover-head {
+  .track-panel__head,
+  .discover-head,
+  .push-panel__head {
     flex-direction: column;
     align-items: stretch;
   }
@@ -889,6 +1037,10 @@ const handleDeletePost = async (postId) => {
 
   .discover-panel {
     padding: 0;
+  }
+
+  .discover-active-track {
+    padding: 0.8rem 1rem;
   }
 
   .load-more-btn {
