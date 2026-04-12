@@ -177,12 +177,23 @@
             {{ uiStore.t('exploreTrackClear') }}
           </button>
         </div>
+        <div class="push-panel__stats">
+          <span class="push-panel__stat">{{ pushChannelsTotal }} {{ uiStore.t('postsInFeed') }}</span>
+          <span v-if="hottestChannel" class="push-panel__stat">
+            {{ uiStore.locale === 'zh' ? `\u70ed\u95e8\u5165\u53e3\uff1a${hottestChannel.label}` : `Hot lane: ${hottestChannel.label}` }}
+          </span>
+        </div>
 
         <div class="push-stream">
           <article
             v-for="(item, index) in pushChannels"
             :key="item.key"
-            :class="['push-stream__card', { 'push-stream__card--active': activeChannel?.key === item.key }]"
+            :class="[
+              'push-stream__card',
+              `push-stream__card--${item.key}`,
+              { 'push-stream__card--active': activeChannel?.key === item.key }
+            ]"
+            :style="{ '--lane-delay': `${index * 45}ms` }"
             role="button"
             tabindex="0"
             :aria-pressed="activeChannel?.key === item.key"
@@ -214,6 +225,12 @@
 
               <p class="push-stream__summary">{{ item.summary }}</p>
               <p class="push-stream__meta">{{ item.meta }}</p>
+              <div class="push-stream__meter">
+                <span class="push-stream__meter-track">
+                  <span class="push-stream__meter-fill" :style="{ width: `${item.coverage}%` }"></span>
+                </span>
+                <small>{{ item.coverage }}%</small>
+              </div>
 
               <div class="push-stream__actions">
                 <button type="button" class="push-stream__button" @click.stop="openDraftComposer(item)">
@@ -369,17 +386,21 @@ const buildTrackSummary = (post, fallback) => {
   return content.length > 96 ? `${content.slice(0, 96).trim()}...` : content
 }
 
+const discoveryTotalPosts = computed(() => Math.max(1, discovery.value.rankedPosts.length))
+
 const discoveryTracks = computed(() =>
   channelDefinitions.value.map((channel) => {
     const matchedPosts = filterPostsByChannel(discovery.value.rankedPosts, channel.key)
     const leadPost = matchedPosts[0] || null
+    const coverage = Math.round((matchedPosts.length / discoveryTotalPosts.value) * 100)
 
     return {
       ...channel,
       count: matchedPosts.length,
+      coverage,
       summary: buildTrackSummary(leadPost, channel.description),
       meta: leadPost
-        ? `${leadPost.author} · ${leadPost.topic || formatPostTypeLabel(leadPost.postType, uiStore.locale)}`
+        ? `${leadPost.author} | ${leadPost.topic || formatPostTypeLabel(leadPost.postType, uiStore.locale)}`
         : uiStore.t('exploreTrackEmpty')
     }
   })
@@ -449,18 +470,28 @@ const rankedPosts = computed(() => {
 const pushChannels = computed(() =>
   [...discoveryTracks.value].sort((left, right) => right.count - left.count || left.priority - right.priority)
 )
+const pushChannelsTotal = computed(() =>
+  pushChannels.value.reduce((sum, item) => sum + item.count, 0)
+)
+const hottestChannel = computed(() => pushChannels.value.find((item) => item.count > 0) || null)
 const visiblePosts = computed(() => rankedPosts.value.slice(0, visibleCount.value))
 const hasMore = computed(() => visibleCount.value < rankedPosts.value.length)
 const pushPanelSummary = computed(() => {
   if (activeChannel.value) {
     return uiStore.locale === 'zh'
-      ? `当前已筛选：${activeChannel.value.label}（${channelRankedPosts.value.length} 条）`
+      ? `\u5f53\u524d\u5df2\u7b5b\u9009\uff1a${activeChannel.value.label}\uff08${channelRankedPosts.value.length} \u6761\uff09`
       : `Now filtered: ${activeChannel.value.label} (${channelRankedPosts.value.length})`
   }
 
-  const total = pushChannels.value.reduce((sum, item) => sum + item.count, 0)
+  if (hottestChannel.value?.count) {
+    return uiStore.locale === 'zh'
+      ? `\u5efa\u8bae\u5148\u770b ${hottestChannel.value.label}\uff0c\u5f53\u524d\u70ed\u5ea6\u6700\u9ad8\u3002`
+      : `Start with ${hottestChannel.value.label}, it is currently the hottest lane.`
+  }
+
+  const total = pushChannelsTotal.value
   return uiStore.locale === 'zh'
-    ? `点击任意入口可快速筛选主内容流（共 ${total} 条）`
+    ? `\u70b9\u51fb\u4efb\u610f\u5165\u53e3\u53ef\u5feb\u901f\u7b5b\u9009\u4e3b\u5185\u5bb9\u6d41\uff08\u5171 ${total} \u6761\uff09`
     : `Tap any lane to filter the main feed quickly (${total} total posts)`
 })
 
@@ -969,6 +1000,36 @@ const handleDeletePost = async (postId) => {
   color: var(--app-text-soft);
   font-size: 0.82rem;
   line-height: 1.5;
+  max-width: 34ch;
+}
+
+.push-panel__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.46rem;
+  margin-top: 0.78rem;
+}
+
+.push-panel__stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.34rem 0.68rem;
+  border: 1px solid rgba(37, 99, 235, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--app-primary-dark);
+  font-size: 0.76rem;
+  font-weight: 700;
+  backdrop-filter: blur(2px);
+}
+
+.push-panel__stat::before {
+  content: '';
+  width: 0.36rem;
+  height: 0.36rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1d4ed8, #60a5fa);
 }
 
 .push-panel__clear {
@@ -982,6 +1043,16 @@ const handleDeletePost = async (postId) => {
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
+  transition:
+    transform 140ms ease,
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.push-panel__clear:hover {
+  transform: translateY(-1px);
+  border-color: rgba(37, 99, 235, 0.28);
+  background: rgba(37, 99, 235, 0.13);
 }
 
 .push-panel::before {
@@ -998,9 +1069,22 @@ const handleDeletePost = async (postId) => {
   align-content: start;
   gap: 0.7rem;
   margin-top: 1rem;
+  padding-right: 0.12rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(37, 99, 235, 0.28) transparent;
 }
 
 .push-stream__card {
+  --lane-gradient: linear-gradient(135deg, #1d4ed8, #60a5fa);
+  --lane-halo: rgba(37, 99, 235, 0.1);
+  --lane-shadow: rgba(37, 99, 235, 0.2);
+  --lane-line: rgba(37, 99, 235, 0.3);
+  --lane-chip: rgba(37, 99, 235, 0.08);
+
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.85rem;
@@ -1011,6 +1095,46 @@ const handleDeletePost = async (postId) => {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(244, 248, 255, 0.96));
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.05);
+  transition:
+    transform 170ms ease,
+    border-color 170ms ease,
+    box-shadow 170ms ease;
+  animation: push-card-in 340ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--lane-delay, 0ms);
+}
+
+.push-stream__card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.24rem;
+  border-radius: 18px 0 0 18px;
+  background: var(--lane-gradient);
+}
+
+.push-stream__card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 255, 255, 0.52) 52%,
+    rgba(255, 255, 255, 0) 66%
+  );
+  transform: translateX(-130%);
+  transition: transform 320ms ease;
+  pointer-events: none;
+}
+
+.push-stream__card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(37, 99, 235, 0.26);
+  box-shadow: 0 18px 28px rgba(37, 99, 235, 0.12);
+}
+
+.push-stream__card:hover::after {
+  transform: translateX(125%);
 }
 
 .push-stream__card:focus-visible {
@@ -1019,7 +1143,33 @@ const handleDeletePost = async (postId) => {
 }
 
 .push-stream__card--active {
+  border-color: rgba(37, 99, 235, 0.24);
   background: linear-gradient(180deg, rgba(238, 246, 255, 0.98), rgba(234, 245, 255, 0.96));
+  box-shadow: 0 18px 30px rgba(37, 99, 235, 0.15);
+}
+
+.push-stream__card--exam_exchange {
+  --lane-gradient: linear-gradient(135deg, #0284c7, #2563eb);
+  --lane-halo: rgba(2, 132, 199, 0.14);
+  --lane-shadow: rgba(2, 132, 199, 0.22);
+  --lane-line: rgba(2, 132, 199, 0.34);
+  --lane-chip: rgba(2, 132, 199, 0.1);
+}
+
+.push-stream__card--team_request {
+  --lane-gradient: linear-gradient(135deg, #0f766e, #22c55e);
+  --lane-halo: rgba(15, 118, 110, 0.14);
+  --lane-shadow: rgba(34, 197, 94, 0.22);
+  --lane-line: rgba(34, 197, 94, 0.34);
+  --lane-chip: rgba(34, 197, 94, 0.1);
+}
+
+.push-stream__card--club_recruitment {
+  --lane-gradient: linear-gradient(135deg, #ea580c, #f97316);
+  --lane-halo: rgba(249, 115, 22, 0.16);
+  --lane-shadow: rgba(234, 88, 12, 0.24);
+  --lane-line: rgba(249, 115, 22, 0.36);
+  --lane-chip: rgba(249, 115, 22, 0.12);
 }
 
 .push-stream__rail {
@@ -1033,8 +1183,8 @@ const handleDeletePost = async (postId) => {
   width: 0.72rem;
   height: 0.72rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, #2563eb, #60a5fa);
-  box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.08);
+  background: var(--lane-gradient);
+  box-shadow: 0 0 0 5px var(--lane-halo);
 }
 
 .push-stream__line {
@@ -1043,7 +1193,7 @@ const handleDeletePost = async (postId) => {
   min-height: 2.4rem;
   margin-top: 0.35rem;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.3), rgba(96, 165, 250, 0.08));
+  background: linear-gradient(180deg, var(--lane-line), rgba(255, 255, 255, 0));
 }
 
 .push-stream__body {
@@ -1064,11 +1214,19 @@ const handleDeletePost = async (postId) => {
   height: 2.15rem;
   flex-shrink: 0;
   border-radius: 0.8rem;
-  background: linear-gradient(135deg, #1d4ed8, #60a5fa);
+  background: var(--lane-gradient);
   color: white;
   font-size: 0.96rem;
   font-weight: 900;
-  box-shadow: 0 12px 22px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 12px 22px var(--lane-shadow);
+}
+
+.push-stream__eyebrow {
+  color: var(--app-text-soft);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .push-stream__identity strong {
@@ -1086,9 +1244,90 @@ const handleDeletePost = async (postId) => {
   font-weight: 800;
 }
 
+.push-stream__summary {
+  margin-top: 0.46rem;
+  color: var(--app-heading);
+}
+
 .push-stream__meta {
-  margin-top: 0.45rem;
+  margin-top: 0.4rem;
   font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.push-stream__count {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: var(--lane-chip);
+}
+
+.push-stream__meter {
+  display: flex;
+  align-items: center;
+  gap: 0.48rem;
+  margin-top: 0.52rem;
+}
+
+.push-stream__meter-track {
+  position: relative;
+  flex: 1;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.09);
+  overflow: hidden;
+}
+
+.push-stream__meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--lane-gradient);
+  transition: width 220ms ease;
+}
+
+.push-stream__meter small {
+  flex-shrink: 0;
+  color: var(--app-primary-dark);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.push-stream__actions {
+  margin-top: 0.62rem;
+}
+
+.push-stream__button,
+.push-stream__ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.push-stream__actions .push-stream__button,
+.push-stream__actions .push-stream__ghost {
+  flex: 1 1 auto;
+}
+
+@keyframes push-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .push-stream__card {
+    animation: none;
+    transition: none;
+  }
+
+  .push-stream__card::after {
+    transition: none;
+  }
 }
 
 @media (max-width: 860px) {
@@ -1105,6 +1344,10 @@ const handleDeletePost = async (postId) => {
   }
 
   .filter-strip {
+    justify-content: flex-start;
+  }
+
+  .push-panel__stats {
     justify-content: flex-start;
   }
 }
@@ -1126,6 +1369,20 @@ const handleDeletePost = async (postId) => {
   .load-more-btn {
     width: 100%;
     margin: 0.25rem 0 0.65rem;
+  }
+
+  .push-stream__card {
+    grid-template-columns: 1fr;
+    gap: 0.68rem;
+  }
+
+  .push-stream__rail {
+    display: none;
+  }
+
+  .push-stream__actions .push-stream__button,
+  .push-stream__actions .push-stream__ghost {
+    flex: 1 1 calc(50% - 0.4rem);
   }
 }
 </style>

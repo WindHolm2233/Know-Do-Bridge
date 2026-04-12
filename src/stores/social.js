@@ -12,6 +12,16 @@ import {
 import { translateError } from '@/utils/appError'
 
 const POSTS_CACHE_MS = 30 * 1000
+const withErrorDetail = (err, fallbackCode) => {
+  const base = translateError(err, fallbackCode)
+  const detail = err instanceof Error ? String(err.message || '').trim() : ''
+
+  if (!detail || base.includes(detail)) {
+    return base
+  }
+
+  return `${base} (${detail})`
+}
 
 export const useSocialStore = defineStore('social', () => {
   const posts = ref([])
@@ -59,10 +69,10 @@ export const useSocialStore = defineStore('social', () => {
         posts.value = await fetchPosts()
         loadedAt.value = Date.now()
         return posts.value
-      } catch (err) {
-        error.value = translateError(err, 'socialLoadPosts')
-        return posts.value
-      } finally {
+    } catch (err) {
+      error.value = withErrorDetail(err, 'socialLoadPosts')
+      return posts.value
+    } finally {
         loading.value = false
         loadPromise = null
       }
@@ -100,7 +110,7 @@ export const useSocialStore = defineStore('social', () => {
       loadedAt.value = Date.now()
       upsertPost(createdPost)
     } catch (err) {
-      error.value = translateError(err, 'socialCreatePost')
+      error.value = withErrorDetail(err, 'socialCreatePost')
     } finally {
       publishing.value = false
     }
@@ -125,7 +135,7 @@ export const useSocialStore = defineStore('social', () => {
     } catch (err) {
       target.liked = previousLiked
       target.likes = previousLikes
-      error.value = translateError(err, 'socialUpdateLike')
+      error.value = withErrorDetail(err, 'socialUpdateLike')
     }
   }
 
@@ -146,7 +156,7 @@ export const useSocialStore = defineStore('social', () => {
           : post
       )
     } catch (err) {
-      error.value = translateError(err, 'socialCreateComment')
+      error.value = withErrorDetail(err, 'socialCreateComment')
     } finally {
       commenting.value = false
     }
@@ -167,7 +177,7 @@ export const useSocialStore = defineStore('social', () => {
       loadedAt.value = Date.now()
       posts.value = posts.value.filter((post) => post.id !== postId)
     } catch (err) {
-      error.value = translateError(err, 'socialDeletePost')
+      error.value = withErrorDetail(err, 'socialDeletePost')
     } finally {
       deletingPostId.value = ''
     }

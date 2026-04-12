@@ -150,6 +150,17 @@ const resolveAuthorName = (user, profile, fallback = '') =>
 const resolveAuthorRole = (user, profile, fallback = '') =>
   profile?.headline || fallback || user?.user_metadata?.headline || ''
 
+const loadProfileSafely = async (userId) => {
+  try {
+    return await getSupabaseProfile(userId)
+  } catch {
+    return null
+  }
+}
+
+const isMissingColumnError = (error) =>
+  error?.code === '42703' || /column .* does not exist/i.test(String(error?.message || ''))
+
 const fetchSupabaseCommentsByPost = async (postIds) => {
   if (!postIds.length) {
     return new Map()
@@ -249,21 +260,28 @@ export const createPost = async (payload) => {
       throw createAppError('socialRequireSignInPost')
     }
 
-    const profile = await getSupabaseProfile(user.id)
-
-    const insertPayload = {
+    const profile = await loadProfileSafely(user.id)
+    const basePayload = {
       author_id: user.id,
-      author_name: resolveAuthorName(user, profile, payload.author),
-      author_role: resolveAuthorRole(user, profile, payload.role),
       topic: payload.topic,
       content: payload.content
     }
+    let insertPayload = {
+      ...basePayload,
+      author_name: resolveAuthorName(user, profile, payload.author),
+      author_role: resolveAuthorRole(user, profile, payload.role)
+    }
 
-    const { data, error } = await client
-      .from(config.postsTable)
-      .insert(insertPayload)
-      .select()
-      .single()
+    let { data, error } = await client.from(config.postsTable).insert(insertPayload).select().single()
+
+    if (error && isMissingColumnError(error)) {
+      insertPayload = {
+        ...basePayload,
+        author: resolveAuthorName(user, profile, payload.author),
+        role: resolveAuthorRole(user, profile, payload.role)
+      }
+      ;({ data, error } = await client.from(config.postsTable).insert(insertPayload).select().single())
+    }
 
     if (error) {
       throw createAppError('socialCreatePost', error.message)
@@ -351,21 +369,28 @@ export const addComment = async (postId, payload) => {
       throw createAppError('socialRequireSignInComment')
     }
 
-    const profile = await getSupabaseProfile(user.id)
-
-    const insertPayload = {
+    const profile = await loadProfileSafely(user.id)
+    const basePayload = {
       post_id: postId,
       author_id: user.id,
-      author_name: resolveAuthorName(user, profile, payload.author),
-      author_role: resolveAuthorRole(user, profile, payload.role),
       content: payload.content
     }
+    let insertPayload = {
+      ...basePayload,
+      author_name: resolveAuthorName(user, profile, payload.author),
+      author_role: resolveAuthorRole(user, profile, payload.role)
+    }
 
-    const { data, error } = await client
-      .from(config.commentsTable)
-      .insert(insertPayload)
-      .select()
-      .single()
+    let { data, error } = await client.from(config.commentsTable).insert(insertPayload).select().single()
+
+    if (error && isMissingColumnError(error)) {
+      insertPayload = {
+        ...basePayload,
+        author: resolveAuthorName(user, profile, payload.author),
+        role: resolveAuthorRole(user, profile, payload.role)
+      }
+      ;({ data, error } = await client.from(config.commentsTable).insert(insertPayload).select().single())
+    }
 
     if (error) {
       throw createAppError('socialCreateComment', error.message)
