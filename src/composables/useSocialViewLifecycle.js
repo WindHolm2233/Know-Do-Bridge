@@ -1,7 +1,19 @@
 import { onMounted, onUnmounted } from 'vue'
 
+const REALTIME_STOP_DELAY_MS = 8000
+let activeConsumers = 0
+let sharedStopTimer = null
+
 export const useSocialViewLifecycle = (socialStore) => {
   let idleHandle = null
+
+  const clearSharedStopTimer = () => {
+    if (typeof window !== 'undefined' && sharedStopTimer) {
+      window.clearTimeout(sharedStopTimer)
+    }
+
+    sharedStopTimer = null
+  }
 
   const scheduleRealtimeStart = () => {
     if (typeof window === 'undefined') {
@@ -34,12 +46,31 @@ export const useSocialViewLifecycle = (socialStore) => {
   }
 
   onMounted(async () => {
+    activeConsumers += 1
+    clearSharedStopTimer()
     await socialStore.loadInitialPosts()
     scheduleRealtimeStart()
   })
 
   onUnmounted(() => {
+    activeConsumers = Math.max(0, activeConsumers - 1)
     cancelScheduledRealtime()
-    socialStore.stopRealtime()
+
+    if (activeConsumers > 0) {
+      return
+    }
+
+    if (typeof window === 'undefined') {
+      socialStore.stopRealtime()
+      return
+    }
+
+    clearSharedStopTimer()
+    sharedStopTimer = window.setTimeout(() => {
+      if (activeConsumers === 0) {
+        socialStore.stopRealtime()
+      }
+      sharedStopTimer = null
+    }, REALTIME_STOP_DELAY_MS)
   })
 }

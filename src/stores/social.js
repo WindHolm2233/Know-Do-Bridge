@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import {
   addComment,
@@ -24,7 +24,7 @@ const withErrorDetail = (err, fallbackCode) => {
 }
 
 export const useSocialStore = defineStore('social', () => {
-  const posts = ref([])
+  const posts = shallowRef([])
   const loading = ref(false)
   const publishing = ref(false)
   const commenting = ref(false)
@@ -125,16 +125,32 @@ export const useSocialStore = defineStore('social', () => {
 
     error.value = ''
     const previousLiked = target.liked
+    const nextLiked = !previousLiked
     const previousLikes = target.likes
+    const nextLikes = Math.max(0, previousLikes + (nextLiked ? 1 : -1))
 
-    target.liked = !target.liked
-    target.likes += target.liked ? 1 : -1
+    posts.value = posts.value.map((post) =>
+      post.id === postId
+        ? {
+            ...post,
+            liked: nextLiked,
+            likes: nextLikes
+          }
+        : post
+    )
 
     try {
-      await togglePostLike(postId, target.liked)
+      await togglePostLike(postId, nextLiked)
     } catch (err) {
-      target.liked = previousLiked
-      target.likes = previousLikes
+      posts.value = posts.value.map((post) =>
+        post.id === postId
+          ? {
+              ...post,
+              liked: previousLiked,
+              likes: previousLikes
+            }
+          : post
+      )
       error.value = withErrorDetail(err, 'socialUpdateLike')
     }
   }

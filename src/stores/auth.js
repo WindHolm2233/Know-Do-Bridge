@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
 import {
   fetchCurrentUser,
@@ -30,12 +30,47 @@ export const useAuthStore = defineStore('auth', () => {
   const verificationCooldownSeconds = computed(() =>
     Math.max(0, Math.ceil((verificationCooldownUntil.value - cooldownNow.value) / 1000))
   )
+  let cooldownTimer = null
 
-  if (typeof window !== 'undefined') {
-    window.setInterval(() => {
-      cooldownNow.value = Date.now()
+  const stopCooldownTicker = () => {
+    if (typeof window === 'undefined' || !cooldownTimer) {
+      cooldownTimer = null
+      return
+    }
+
+    window.clearInterval(cooldownTimer)
+    cooldownTimer = null
+  }
+
+  const startCooldownTicker = () => {
+    if (typeof window === 'undefined' || cooldownTimer) {
+      return
+    }
+
+    cooldownTimer = window.setInterval(() => {
+      const now = Date.now()
+      cooldownNow.value = now
+
+      if (verificationCooldownUntil.value <= now) {
+        stopCooldownTicker()
+      }
     }, 1000)
   }
+
+  watch(
+    verificationCooldownUntil,
+    (nextValue) => {
+      cooldownNow.value = Date.now()
+
+      if (nextValue > cooldownNow.value) {
+        startCooldownTicker()
+        return
+      }
+
+      stopCooldownTicker()
+    },
+    { immediate: true }
+  )
 
   const loadCurrentUser = async ({ force = false } = {}) => {
     if (!force && loadPromise) {

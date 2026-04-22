@@ -9,6 +9,9 @@ import { createAppError } from '@/utils/appError'
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const LOCAL_MESSAGES_STORAGE_KEY = 'campus-link-direct-messages'
 const LOCAL_MESSAGE_READS_STORAGE_KEY = 'campus-link-direct-message-reads'
+const STORAGE_WRITE_DEBOUNCE_MS = 240
+const MAX_LOCAL_MESSAGES = 1200
+const MAX_LOCAL_READ_STATES = 1200
 
 const createId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -39,6 +42,8 @@ const normalizeReadState = (record) => ({
 const cloneMessages = (messages) => messages.map((message) => ({ ...message }))
 const sortMessages = (messages) =>
   [...messages].sort((left, right) => new Date(left.createdAt) - new Date(right.createdAt))
+const trimMessages = (messages) =>
+  messages.length > MAX_LOCAL_MESSAGES ? messages.slice(messages.length - MAX_LOCAL_MESSAGES) : messages
 const mergeMessages = (...collections) => {
   const merged = new Map()
 
@@ -47,7 +52,7 @@ const mergeMessages = (...collections) => {
     merged.set(normalized.id, normalized)
   })
 
-  return sortMessages([...merged.values()])
+  return trimMessages(sortMessages([...merged.values()]))
 }
 
 const filterMessagesForUser = (messages, currentUserId) =>
@@ -86,6 +91,12 @@ const mergeReadStates = (...collections) => {
   })
 
   return [...merged.values()]
+    .sort(
+      (left, right) =>
+        new Date(right.updatedAt || right.lastReadAt).getTime() -
+        new Date(left.updatedAt || left.lastReadAt).getTime()
+    )
+    .slice(0, MAX_LOCAL_READ_STATES)
 }
 
 const filterReadStatesForUser = (entries, currentUserId) =>
@@ -96,6 +107,7 @@ export const getCachedDirectMessages = (currentUserId) => {
     return []
   }
 
+  ensureLocalCacheInitialized()
   return filterMessagesForUser(localMessages, currentUserId)
 }
 
@@ -144,16 +156,27 @@ const readStoredLocalMessages = () => {
   }
 }
 
+let writeLocalMessagesTimer = null
+let writeLocalReadStatesTimer = null
+
 const writeStoredLocalMessages = (messages) => {
   if (typeof localStorage === 'undefined') {
     return
   }
 
-  try {
-    localStorage.setItem(LOCAL_MESSAGES_STORAGE_KEY, JSON.stringify(messages))
-  } catch (error) {
-    console.warn('Unable to persist local direct messages cache.', error)
+  if (writeLocalMessagesTimer) {
+    clearTimeout(writeLocalMessagesTimer)
   }
+
+  writeLocalMessagesTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(LOCAL_MESSAGES_STORAGE_KEY, JSON.stringify(messages))
+    } catch (error) {
+      console.warn('Unable to persist local direct messages cache.', error)
+    } finally {
+      writeLocalMessagesTimer = null
+    }
+  }, STORAGE_WRITE_DEBOUNCE_MS)
 }
 
 const readStoredLocalReadStates = () => {
@@ -181,19 +204,42 @@ const writeStoredLocalReadStates = (entries) => {
     return
   }
 
-  try {
-    localStorage.setItem(LOCAL_MESSAGE_READS_STORAGE_KEY, JSON.stringify(entries))
-  } catch (error) {
-    console.warn('Unable to persist local direct message read-state cache.', error)
+  if (writeLocalReadStatesTimer) {
+    clearTimeout(writeLocalReadStatesTimer)
   }
+
+  writeLocalReadStatesTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(LOCAL_MESSAGE_READS_STORAGE_KEY, JSON.stringify(entries))
+    } catch (error) {
+      console.warn('Unable to persist local direct message read-state cache.', error)
+    } finally {
+      writeLocalReadStatesTimer = null
+    }
+  }, STORAGE_WRITE_DEBOUNCE_MS)
 }
 
 let localMessages = []
 let localReadStates = []
 const localListeners = new Map()
 let localStorageListenerInstalled = false
+let localCacheInitialized = false
+
+function notifyLocalSubscribers() {
+  const snapshot = cloneMessages(localMessages)
+  const snapshotsByUser = new Map()
+
+  localListeners.forEach((userId, listener) => {
+    if (!snapshotsByUser.has(userId)) {
+      snapshotsByUser.set(userId, filterMessagesForUser(snapshot, userId))
+    }
+
+    listener(snapshotsByUser.get(userId))
+  })
+}
 
 const setLocalMessages = (messages) => {
+  ensureLocalCacheInitialized()
   localMessages = mergeMessages(messages)
   writeStoredLocalMessages(localMessages)
   notifyLocalSubscribers()
@@ -201,6 +247,7 @@ const setLocalMessages = (messages) => {
 }
 
 const syncLocalMessages = (messages) => {
+  ensureLocalCacheInitialized()
   localMessages = mergeMessages(localMessages, messages)
   writeStoredLocalMessages(localMessages)
   notifyLocalSubscribers()
@@ -208,6 +255,7 @@ const syncLocalMessages = (messages) => {
 }
 
 const syncLocalReadStates = (entries) => {
+  ensureLocalCacheInitialized()
   localReadStates = mergeReadStates(localReadStates, entries)
   writeStoredLocalReadStates(localReadStates)
   return localReadStates
@@ -239,18 +287,22 @@ const ensureLocalStorageListener = () => {
   localStorageListenerInstalled = true
 }
 
-const storedLocalMessages = readStoredLocalMessages()
-localMessages = storedLocalMessages === null ? setLocalMessages(defaultLocalMessages) : storedLocalMessages
-const storedLocalReadStates = readStoredLocalReadStates()
-localReadStates = storedLocalReadStates === null ? [] : storedLocalReadStates
-ensureLocalStorageListener()
+const ensureLocalCacheInitialized = () => {
+  if (localCacheInitialized) {
+    return
+  }
 
-const notifyLocalSubscribers = () => {
-  const snapshot = cloneMessages(localMessages)
+  const storedLocalMessages = readStoredLocalMessages()
+  localMessages = storedLocalMessages === null ? mergeMessages(defaultLocalMessages) : storedLocalMessages
 
-  localListeners.forEach((userId, listener) => {
-    listener(filterMessagesForUser(snapshot, userId))
-  })
+  if (storedLocalMessages === null) {
+    writeStoredLocalMessages(localMessages)
+  }
+
+  const storedLocalReadStates = readStoredLocalReadStates()
+  localReadStates = storedLocalReadStates === null ? [] : storedLocalReadStates
+  ensureLocalStorageListener()
+  localCacheInitialized = true
 }
 
 const fetchSupabaseMessages = async (currentUserId) => {
@@ -307,6 +359,8 @@ export const fetchDirectMessages = async (currentUserId) => {
     return []
   }
 
+  ensureLocalCacheInitialized()
+
   if (canUseSupabase()) {
     try {
       return await fetchSupabaseMessages(currentUserId)
@@ -323,6 +377,8 @@ export const fetchDirectMessageReads = async (currentUserId) => {
   if (!currentUserId) {
     return []
   }
+
+  ensureLocalCacheInitialized()
 
   if (canUseSupabase()) {
     try {
@@ -358,6 +414,8 @@ export const sendDirectMessage = async ({ sender, recipient, content }) => {
     recipient_role: recipient.role,
     content: content.trim()
   }
+
+  ensureLocalCacheInitialized()
 
   if (canUseSupabase()) {
     try {
@@ -395,7 +453,6 @@ export const sendDirectMessage = async ({ sender, recipient, content }) => {
   await wait(60)
   const nextMessage = createLocalMessage(payload)
   syncLocalMessages([nextMessage])
-  notifyLocalSubscribers()
   return nextMessage
 }
 
@@ -409,6 +466,8 @@ export const upsertDirectMessageRead = async ({ userId, peerId, lastReadAt }) =>
     peer_id: peerId,
     last_read_at: lastReadAt || new Date().toISOString()
   }
+
+  ensureLocalCacheInitialized()
 
   if (canUseSupabase()) {
     try {
@@ -443,6 +502,7 @@ export const subscribeToDirectMessages = (currentUserId, callback) => {
     return () => {}
   }
 
+  ensureLocalCacheInitialized()
   const client = getSupabaseClient()
 
   if (canUseSupabase() && client) {
@@ -513,7 +573,6 @@ export const subscribeToDirectMessages = (currentUserId, callback) => {
     }
   }
 
-  ensureLocalStorageListener()
   localListeners.set(callback, currentUserId)
   callback(filterMessagesForUser(localMessages, currentUserId))
 

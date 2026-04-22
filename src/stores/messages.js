@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
 import {
   fetchDirectMessages,
@@ -66,7 +66,7 @@ const writeThreadState = (value) => {
 }
 
 export const useMessagesStore = defineStore('messages', () => {
-  const items = ref([])
+  const items = shallowRef([])
   const loading = ref(false)
   const sending = ref(false)
   const error = ref('')
@@ -80,6 +80,10 @@ export const useMessagesStore = defineStore('messages', () => {
   let threadsCacheSource = null
   let threadsCacheState = null
   let threadsCacheValue = []
+  let unreadCacheUserId = ''
+  let unreadCacheSource = null
+  let unreadCacheState = null
+  let unreadCacheValue = 0
 
   const isRealtimeActive = computed(() => Boolean(realtimeStop.value))
 
@@ -502,8 +506,57 @@ export const useMessagesStore = defineStore('messages', () => {
       (thread) => thread.latestMessage.senderId !== currentUserId
     ).length
 
-  const getUnreadThreadCount = (currentUserId) =>
-    getThreadsForUser(currentUserId).filter((thread) => thread.hasUnread).length
+  const getUnreadThreadCount = (currentUserId) => {
+    if (!currentUserId) {
+      unreadCacheUserId = ''
+      unreadCacheSource = null
+      unreadCacheState = null
+      unreadCacheValue = 0
+      return 0
+    }
+
+    const userThreadState = getUserThreadState(currentUserId)
+    const userThreadStateSource = threadState.value[currentUserId]
+
+    if (
+      unreadCacheUserId === currentUserId &&
+      unreadCacheSource === items.value &&
+      unreadCacheState === userThreadStateSource
+    ) {
+      return unreadCacheValue
+    }
+
+    const latestIncomingByThread = new Map()
+
+    items.value.forEach((message) => {
+      if (message.recipientId !== currentUserId) {
+        return
+      }
+
+      const threadId = buildThreadKey(currentUserId, message.senderId)
+      const previous = latestIncomingByThread.get(threadId)
+      const currentTime = new Date(message.createdAt).getTime()
+      const previousTime = previous ? new Date(previous).getTime() : -Infinity
+
+      if (currentTime >= previousTime) {
+        latestIncomingByThread.set(threadId, message.createdAt)
+      }
+    })
+
+    unreadCacheValue = [...latestIncomingByThread.entries()].filter(([threadId, latestAt]) => {
+      const lastReadAt = userThreadState.threads[threadId]?.lastReadAt
+
+      if (!lastReadAt) {
+        return true
+      }
+
+      return new Date(latestAt).getTime() > new Date(lastReadAt).getTime()
+    }).length
+    unreadCacheUserId = currentUserId
+    unreadCacheSource = items.value
+    unreadCacheState = userThreadStateSource
+    return unreadCacheValue
+  }
 
   return {
     error,

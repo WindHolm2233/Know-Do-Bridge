@@ -11,6 +11,9 @@
           :key="item.to"
           :to="item.to"
           :class="['rail-item', { 'rail-item--active': route.path === item.to }]"
+          @mouseenter="warmRoute(item.to)"
+          @focus="warmRoute(item.to)"
+          @touchstart.passive="warmRoute(item.to)"
         >
           {{ item.label }}
           <span v-if="item.badge" class="rail-badge">{{ item.badge }}</span>
@@ -34,6 +37,7 @@
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import BottomNav from './BottomNav.vue'
+import { preloadRouteComponent } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useMessagesStore } from '@/stores/messages'
 import { useUiStore } from '@/stores/ui'
@@ -54,6 +58,10 @@ const navItems = computed(() => [
   },
   { to: '/profile', label: uiStore.t('navProfile') }
 ])
+
+const warmRoute = (path) => {
+  void preloadRouteComponent(path)
+}
 </script>
 
 <style scoped>

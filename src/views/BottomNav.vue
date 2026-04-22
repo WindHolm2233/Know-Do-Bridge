@@ -5,6 +5,9 @@
       :key="item.to"
       :to="item.to"
       :class="['bottom-nav__item', { 'bottom-nav__item--active': route.path === item.to }]"
+      @mouseenter="warmRoute(item.to)"
+      @focus="warmRoute(item.to)"
+      @touchstart.passive="warmRoute(item.to)"
     >
       <span class="bottom-nav__icon">
         {{ item.icon }}
@@ -18,6 +21,7 @@
 <script setup>
 import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
+import { preloadRouteComponent } from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import { useMessagesStore } from '@/stores/messages'
 import { useUiStore } from '@/stores/ui'
@@ -39,6 +43,10 @@ const items = computed(() => [
   },
   { to: '/profile', label: uiStore.t('navProfile'), icon: 'P' }
 ])
+
+const warmRoute = (path) => {
+  void preloadRouteComponent(path)
+}
 </script>
 
 <style scoped>

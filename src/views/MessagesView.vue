@@ -36,6 +36,14 @@
           <div class="qq-chat__meta"><small v-if="selectedThread?.latestMessage?.createdAt">{{ formatMessageTime(selectedThread.latestMessage.createdAt) }}</small></div>
         </div>
         <div v-if="selectedThread" ref="chatHistoryRef" class="qq-chat__history">
+          <button
+            v-if="hiddenMessageCount"
+            type="button"
+            class="qq-chat__load-older"
+            @click="loadOlderMessages"
+          >
+            {{ loadOlderMessagesText }}
+          </button>
           <template v-for="group in groupedMessages" :key="group.key">
             <div class="qq-chat__date-divider"><span>{{ formatDateLabel(group.key) }}</span></div>
             <template v-for="(message, idx) in group.messages" :key="message.id">
@@ -82,6 +90,8 @@ import { useMessagesStore } from '@/stores/messages'
 import { useUiStore } from '@/stores/ui'
 const MESSAGE_DRAFT_STORAGE_KEY = 'campus-link-message-drafts'
 const MESSAGE_CHARACTER_LIMIT = 500
+const INITIAL_MESSAGE_RENDER_COUNT = 120
+const MESSAGE_RENDER_STEP = 80
 const authStore = useAuthStore()
 const messagesStore = useMessagesStore()
 const uiStore = useUiStore()
@@ -94,7 +104,9 @@ const composerTextareaRef = ref(null)
 const threadSearch = ref('')
 const openedUnreadMessageId = ref('')
 const mobilePane = ref('threads')
+const visibleMessageCount = ref(INITIAL_MESSAGE_RENDER_COUNT)
 const storedDrafts = ref(readStoredDrafts())
+let writeDraftTimer = null
 const threads = computed(() => authStore.currentUser ? messagesStore.getThreadsForUser(authStore.currentUser.id) : [])
 const normalizedThreadSearch = computed(() => threadSearch.value.trim().toLowerCase())
 const routeTarget = computed(() => {
@@ -103,7 +115,19 @@ const routeTarget = computed(() => {
 })
 const flatThreads = computed(() => normalizedThreadSearch.value ? threads.value.filter((thread) => matchesThreadSearch(thread)) : threads.value)
 const selectedThread = computed(() => threads.value.find((thread) => thread.id === activeThreadId.value) || null)
-const groupedMessages = computed(() => groupMessagesByDate(selectedThread.value?.messages || []))
+const visibleThreadMessages = computed(() => {
+  const messages = selectedThread.value?.messages || []
+
+  if (messages.length <= visibleMessageCount.value) {
+    return messages
+  }
+
+  return messages.slice(-visibleMessageCount.value)
+})
+const hiddenMessageCount = computed(() =>
+  Math.max(0, (selectedThread.value?.messages.length || 0) - visibleThreadMessages.value.length)
+)
+const groupedMessages = computed(() => groupMessagesByDate(visibleThreadMessages.value))
 const chatTarget = computed(() => selectedThread.value?.counterpart || routeTarget.value)
 const pageError = computed(() => messagesStore.error)
 const unreadThreadCount = computed(() => authStore.currentUser ? messagesStore.getUnreadThreadCount(authStore.currentUser.id) : 0)
@@ -114,6 +138,11 @@ const sendingText = computed(() => uiStore.locale === 'zh' ? '\u6b63\u5728\u53d1
 const mobileThreadLabel = computed(() => uiStore.locale === 'zh' ? '\u4f1a\u8bdd' : 'Chats')
 const allChatsTitle = computed(() => uiStore.locale === 'zh' ? '\u5168\u90e8\u4f1a\u8bdd' : 'All chats')
 const composerHint = computed(() => uiStore.locale === 'zh' ? 'Enter \u53d1\u9001\uff0cShift + Enter \u6362\u884c' : 'Press Enter to send, Shift + Enter for a new line')
+const loadOlderMessagesText = computed(() =>
+  uiStore.locale === 'zh'
+    ? `\u52a0\u8f7d\u66f4\u65e9\u6d88\u606f (${hiddenMessageCount.value})`
+    : `Load earlier messages (${hiddenMessageCount.value})`
+)
 const currentUserAvatar = computed(() => authStore.currentUser?.avatar || authStore.currentUser?.name?.slice(0, 1)?.toUpperCase() || 'U')
 const currentDraftKey = computed(() => {
   if (!authStore.currentUser?.id) return ''
@@ -126,7 +155,34 @@ function readStoredDrafts() {
   if (typeof localStorage === 'undefined') return {}
   try { const saved = localStorage.getItem(MESSAGE_DRAFT_STORAGE_KEY); return saved ? JSON.parse(saved) || {} : {} } catch { return {} }
 }
-function writeStoredDrafts(value) { if (typeof localStorage !== 'undefined') localStorage.setItem(MESSAGE_DRAFT_STORAGE_KEY, JSON.stringify(value)) }
+function writeStoredDrafts(value, { immediate = false } = {}) {
+  if (typeof localStorage === 'undefined' || typeof window === 'undefined') return
+  const persist = () => {
+    try {
+      localStorage.setItem(MESSAGE_DRAFT_STORAGE_KEY, JSON.stringify(value))
+    } catch {
+      // Ignore storage quota and serialization issues to keep composer responsive.
+    }
+  }
+
+  if (immediate) {
+    if (writeDraftTimer) {
+      window.clearTimeout(writeDraftTimer)
+      writeDraftTimer = null
+    }
+    persist()
+    return
+  }
+
+  if (writeDraftTimer) {
+    window.clearTimeout(writeDraftTimer)
+  }
+
+  writeDraftTimer = window.setTimeout(() => {
+    writeDraftTimer = null
+    persist()
+  }, 220)
+}
 function groupMessagesByDate(messages) {
   const groups = []
   let current = null
@@ -186,11 +242,35 @@ function getFirstUnreadMessageId(thread) {
   return thread.messages.find((message) => message.senderId !== authStore.currentUser.id && new Date(message.createdAt).getTime() > new Date(thread.lastReadAt).getTime())?.id || ''
 }
 async function scrollChatToBottom() { await nextTick(); if (selectedThread.value && chatHistoryRef.value) chatHistoryRef.value.scrollTop = chatHistoryRef.value.scrollHeight }
+function isChatNearBottom(threshold = 56) {
+  if (!chatHistoryRef.value) return false
+  const { scrollTop, clientHeight, scrollHeight } = chatHistoryRef.value
+  return scrollTop + clientHeight >= scrollHeight - threshold
+}
 async function syncComposerHeight() { await nextTick(); if (composerTextareaRef.value) { composerTextareaRef.value.style.height = 'auto'; composerTextareaRef.value.style.height = `${Math.max(composerTextareaRef.value.scrollHeight, 104)}px` } }
 function handleDraftInput() { void syncComposerHeight() }
 function handleComposerKeydown(event) { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); void handleSend() } }
 function showThreadsPane() { mobilePane.value = 'threads' }
-function selectThread(threadId, { focusChat = false } = {}) { const nextThread = threads.value.find((thread) => thread.id === threadId) || null; if (!threadId) return; openedUnreadMessageId.value = getFirstUnreadMessageId(nextThread); activeThreadId.value = threadId; if (focusChat) mobilePane.value = 'chat' }
+async function loadOlderMessages() {
+  if (!selectedThread.value || !hiddenMessageCount.value || !chatHistoryRef.value) return
+  const previousHeight = chatHistoryRef.value.scrollHeight
+  const previousTop = chatHistoryRef.value.scrollTop
+  visibleMessageCount.value = Math.min(
+    selectedThread.value.messages.length,
+    visibleMessageCount.value + MESSAGE_RENDER_STEP
+  )
+  await nextTick()
+  const nextHeight = chatHistoryRef.value.scrollHeight
+  chatHistoryRef.value.scrollTop = previousTop + (nextHeight - previousHeight)
+}
+function selectThread(threadId, { focusChat = false } = {}) {
+  const nextThread = threads.value.find((thread) => thread.id === threadId) || null
+  if (!threadId) return
+  visibleMessageCount.value = INITIAL_MESSAGE_RENDER_COUNT
+  openedUnreadMessageId.value = getFirstUnreadMessageId(nextThread)
+  activeThreadId.value = threadId
+  if (focusChat) mobilePane.value = 'chat'
+}
 function shouldShowUnreadDivider(messageId) { return Boolean(openedUnreadMessageId.value) && openedUnreadMessageId.value === messageId }
 function handleMarkAllRead() { if (authStore.currentUser?.id) { openedUnreadMessageId.value = ''; messagesStore.markAllThreadsRead(authStore.currentUser.id) } }
 function syncActiveThread() {
@@ -210,8 +290,10 @@ watch(() => authStore.currentUser?.id, (currentUserId) => { void syncMessageSess
 watch([threads, routeTarget], syncActiveThread, { immediate: true })
 watch(routeTarget, (nextRouteTarget) => { if (nextRouteTarget) mobilePane.value = 'chat'; else if (!selectedThread.value) mobilePane.value = 'threads' }, { immediate: true })
 watch(() => [authStore.currentUser?.id, selectedThread.value?.id, selectedThread.value?.latestMessage?.createdAt], ([currentUserId, threadId, latest]) => { if (currentUserId && threadId) { messagesStore.setLastActiveThread(currentUserId, threadId); messagesStore.markThreadRead(currentUserId, threadId, latest) } }, { immediate: true })
-watch(currentDraftKey, (nextDraftKey) => { draft.value = nextDraftKey ? storedDrafts.value[nextDraftKey] || '' : '' }, { immediate: true })
-watch(() => draft.value, () => { void syncComposerHeight() }, { immediate: true })
+watch(currentDraftKey, (nextDraftKey) => {
+  draft.value = nextDraftKey ? storedDrafts.value[nextDraftKey] || '' : ''
+  void syncComposerHeight()
+}, { immediate: true })
 watch([currentDraftKey, draft], ([nextDraftKey, nextDraft]) => {
   if (!nextDraftKey) return
   const previous = storedDrafts.value[nextDraftKey] || ''
@@ -220,8 +302,24 @@ watch([currentDraftKey, draft], ([nextDraftKey, nextDraft]) => {
   if (nextDraft.trim()) nextStored[nextDraftKey] = nextDraft; else delete nextStored[nextDraftKey]
   storedDrafts.value = nextStored; writeStoredDrafts(nextStored)
 })
-watch(() => [selectedThread.value?.id, selectedThread.value?.messages.length], () => { void scrollChatToBottom() }, { immediate: true })
-onUnmounted(() => { messagesStore.stopRealtime() })
+watch(
+  () => [selectedThread.value?.id, selectedThread.value?.messages.length],
+  ([nextThreadId], previous = []) => {
+    const [prevThreadId] = previous
+    if (nextThreadId !== prevThreadId || isChatNearBottom()) {
+      void scrollChatToBottom()
+    }
+  },
+  { immediate: true }
+)
+onUnmounted(() => {
+  if (writeDraftTimer && typeof window !== 'undefined') {
+    window.clearTimeout(writeDraftTimer)
+    writeDraftTimer = null
+  }
+  writeStoredDrafts(storedDrafts.value, { immediate: true })
+  messagesStore.stopRealtime()
+})
 async function handleSend() {
   if (!authStore.currentUser || !chatTarget.value || !draft.value.trim()) return
   const created = await messagesStore.sendMessage({ sender: authStore.currentUser, recipient: chatTarget.value, content: draft.value })
@@ -568,6 +666,19 @@ async function handleSend() {
     linear-gradient(90deg, rgba(24, 144, 255, 0.03) 1px, transparent 1px),
     linear-gradient(rgba(24, 144, 255, 0.03) 1px, transparent 1px);
   background-size: auto, 24px 24px, 24px 24px;
+}
+
+.qq-chat__load-older {
+  display: block;
+  margin: 0 auto 0.9rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--app-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .qq-chat__date-divider,
