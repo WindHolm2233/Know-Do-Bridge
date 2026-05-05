@@ -35,6 +35,12 @@
         </button>
       </div>
 
+      <div class="auth-intro-trigger">
+        <button class="intro-btn" type="button" @click="openIntroModal">
+          {{ introButtonLabel }}
+        </button>
+      </div>
+
       <input
         v-model="form.email"
         type="email"
@@ -92,11 +98,40 @@
         }}
       </button>
     </form>
+
+    <Teleport to="body">
+      <div
+        v-if="!currentUser && showIntroModal"
+        class="intro-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="site-intro-title"
+        @click.self="closeIntroModal"
+      >
+        <div class="intro-modal__card">
+          <button class="intro-modal__close" type="button" @click="closeIntroModal" aria-label="Close">
+            x
+          </button>
+
+          <p class="intro-modal__eyebrow">{{ introContent.eyebrow }}</p>
+          <h4 id="site-intro-title">{{ introContent.title }}</h4>
+          <p class="intro-modal__description">{{ introContent.description }}</p>
+
+          <ul class="intro-modal__list">
+            <li v-for="item in introContent.highlights" :key="item">{{ item }}</li>
+          </ul>
+
+          <button class="primary-btn intro-modal__action" type="button" @click="closeIntroModal">
+            {{ introContent.actionLabel }}
+          </button>
+        </div>
+      </div>
+    </Teleport>
   </section>
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { roleOptionsByLocale } from '@/constants/userRoles'
 import { useUiStore } from '@/stores/ui'
 
@@ -137,6 +172,8 @@ const props = defineProps({
 
 const emit = defineEmits(['sign-in', 'sign-out', 'resend-verification'])
 const uiStore = useUiStore()
+const INTRO_MODAL_STORAGE_KEY = 'webapp:intro-modal-dismissed'
+const showIntroModal = ref(false)
 
 const form = reactive({
   mode: 'signin',
@@ -152,9 +189,11 @@ watch(
   () => props.currentUser,
   (nextUser) => {
     if (!nextUser) {
+      showIntroModal.value = shouldAutoOpenIntro()
       return
     }
 
+    showIntroModal.value = false
     form.password = ''
   }
 )
@@ -208,6 +247,62 @@ const resendButtonText = computed(() => {
 
   return uiStore.t('resendVerificationEmail')
 })
+const introContent = computed(() =>
+  uiStore.locale === 'zh'
+    ? {
+        eyebrow: '欢迎来到本站',
+        title: '一个轻量社交交流空间',
+        description:
+          '这里可以发布动态、互动点赞评论、查看通知并进行私信沟通，帮助你和同伴更快建立连接。',
+        highlights: ['发布和浏览最新动态', '点赞与评论实时互动', '消息与通知集中管理'],
+        actionLabel: '我知道了'
+      }
+    : {
+        eyebrow: 'Welcome',
+        title: 'A lightweight social space',
+        description:
+          'Share updates, interact through likes and comments, check notifications, and chat in one place.',
+        highlights: [
+          'Publish and browse fresh posts',
+          'Engage with likes and comments',
+          'Manage messages and notifications'
+        ],
+        actionLabel: 'Got it'
+      }
+)
+const introButtonLabel = computed(() => (uiStore.locale === 'zh' ? '网站介绍' : 'About this site'))
+
+const shouldAutoOpenIntro = () => {
+  if (props.currentUser) {
+    return false
+  }
+
+  if (typeof window === 'undefined') {
+    return true
+  }
+
+  return window.localStorage.getItem(INTRO_MODAL_STORAGE_KEY) !== '1'
+}
+
+const closeIntroModal = () => {
+  showIntroModal.value = false
+
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.localStorage.setItem(INTRO_MODAL_STORAGE_KEY, '1')
+}
+
+const openIntroModal = () => {
+  showIntroModal.value = true
+}
+
+const handleIntroKeydown = (event) => {
+  if (event.key === 'Escape' && showIntroModal.value) {
+    closeIntroModal()
+  }
+}
 
 const handleSubmit = () => {
   emit('sign-in', {
@@ -222,6 +317,20 @@ const handleSubmit = () => {
 const handleResendVerification = () => {
   emit('resend-verification', resolvedEmail.value)
 }
+
+onMounted(() => {
+  showIntroModal.value = shouldAutoOpenIntro()
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', handleIntroKeydown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', handleIntroKeydown)
+  }
+})
 </script>
 
 <style scoped>
@@ -279,6 +388,21 @@ const handleResendVerification = () => {
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
+}
+
+.auth-intro-trigger {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.intro-btn {
+  border: none;
+  background: transparent;
+  color: var(--app-accent);
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .auth-tabs {
@@ -416,6 +540,72 @@ const handleResendVerification = () => {
   background: var(--app-accent-soft);
 }
 
+.intro-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(14, 23, 43, 0.5);
+}
+
+.intro-modal__card {
+  position: relative;
+  width: min(100%, 30rem);
+  padding: 1.1rem 1rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-surface-elevated);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22);
+}
+
+.intro-modal__close {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 999px;
+  background: var(--app-surface-soft);
+  color: var(--app-text-soft);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.intro-modal__eyebrow {
+  color: var(--app-accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.intro-modal h4 {
+  margin-top: 0.35rem;
+  color: var(--app-heading);
+  font-size: 1.22rem;
+  font-weight: 800;
+}
+
+.intro-modal__description {
+  margin-top: 0.5rem;
+  color: var(--app-text-soft);
+}
+
+.intro-modal__list {
+  margin: 0.7rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--app-heading);
+  line-height: 1.55;
+}
+
+.intro-modal__action {
+  width: 100%;
+  margin-top: 0.8rem;
+}
+
 @media (max-width: 680px) {
   .auth-panel {
     border-radius: 18px;
@@ -433,6 +623,10 @@ const handleResendVerification = () => {
   .primary-btn,
   .ghost-btn {
     width: 100%;
+  }
+
+  .intro-modal__card {
+    border-radius: 14px;
   }
 }
 </style>
