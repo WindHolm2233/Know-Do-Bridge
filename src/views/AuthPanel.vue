@@ -109,8 +109,13 @@
         @click.self="closeIntroModal"
       >
         <div class="intro-modal__card">
-          <button class="intro-modal__close" type="button" @click="closeIntroModal" aria-label="Close">
-            x
+          <button
+            class="intro-modal__close"
+            type="button"
+            @click="closeIntroModal"
+            :aria-label="uiStore.locale === 'zh' ? '关闭' : 'Close'"
+          >
+            ×
           </button>
 
           <p class="intro-modal__eyebrow">{{ introContent.eyebrow }}</p>
@@ -138,36 +143,36 @@ import { useUiStore } from '@/stores/ui'
 const props = defineProps({
   currentUser: {
     type: Object,
-    default: null
+    default: null,
   },
   submitting: {
     type: Boolean,
-    default: false
+    default: false,
   },
   error: {
     type: String,
-    default: ''
+    default: '',
   },
   notice: {
     type: String,
-    default: ''
+    default: '',
   },
   usingSupabase: {
     type: Boolean,
-    default: false
+    default: false,
   },
   pendingVerificationEmail: {
     type: String,
-    default: ''
+    default: '',
   },
   resending: {
     type: Boolean,
-    default: false
+    default: false,
   },
   resendCooldownSeconds: {
     type: Number,
-    default: 0
-  }
+    default: 0,
+  },
 })
 
 const emit = defineEmits(['sign-in', 'sign-out', 'resend-verification'])
@@ -180,7 +185,7 @@ const form = reactive({
   email: '',
   password: '',
   name: '',
-  role: ''
+  role: '',
 })
 
 const roleOptions = computed(() => roleOptionsByLocale[uiStore.locale] || roleOptionsByLocale.en)
@@ -195,7 +200,7 @@ watch(
 
     showIntroModal.value = false
     form.password = ''
-  }
+  },
 )
 
 watch(
@@ -207,7 +212,7 @@ watch(
 
     form.mode = 'signin'
     form.password = ''
-  }
+  },
 )
 
 const canSubmit = computed(() => {
@@ -224,16 +229,16 @@ const canSubmit = computed(() => {
 
 const resolvedEmail = computed(() => form.email.trim() || props.pendingVerificationEmail.trim())
 const shouldSuggestResendFromError = computed(() =>
-  /confirm|verified|verification|email/i.test(props.error)
+  /confirm|verified|verification|email/i.test(props.error),
 )
 const showResendConfirmation = computed(
   () =>
     props.usingSupabase &&
     Boolean(resolvedEmail.value) &&
-    (Boolean(props.notice) || shouldSuggestResendFromError.value || form.mode === 'signup')
+    (Boolean(props.notice) || shouldSuggestResendFromError.value || form.mode === 'signup'),
 )
 const resendCooldownLabel = computed(
-  () => `${uiStore.t('resendInPrefix')} ${props.resendCooldownSeconds}s`
+  () => `${uiStore.t('resendInPrefix')} ${props.resendCooldownSeconds}s`,
 )
 const isResendDisabled = computed(() => !resolvedEmail.value || props.resendCooldownSeconds > 0)
 const resendButtonText = computed(() => {
@@ -255,7 +260,7 @@ const introContent = computed(() =>
         description:
           '这里可以发布动态、互动点赞评论、查看通知并进行私信沟通，帮助你和同伴更快建立连接。',
         highlights: ['发布和浏览最新动态', '点赞与评论实时互动', '消息与通知集中管理'],
-        actionLabel: '我知道了'
+        actionLabel: '我知道了',
       }
     : {
         eyebrow: 'Welcome',
@@ -265,10 +270,10 @@ const introContent = computed(() =>
         highlights: [
           'Publish and browse fresh posts',
           'Engage with likes and comments',
-          'Manage messages and notifications'
+          'Manage messages and notifications',
         ],
-        actionLabel: 'Got it'
-      }
+        actionLabel: 'Got it',
+      },
 )
 const introButtonLabel = computed(() => (uiStore.locale === 'zh' ? '网站介绍' : 'About this site'))
 
@@ -310,7 +315,7 @@ const handleSubmit = () => {
     email: form.email.trim(),
     password: form.password,
     name: form.name.trim(),
-    role: form.role.trim()
+    role: form.role.trim(),
   })
 }
 
@@ -336,10 +341,10 @@ onUnmounted(() => {
 <style scoped>
 .auth-panel {
   padding: 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 20px;
-  background: var(--app-surface-elevated);
-  box-shadow: 0 18px 40px rgba(111, 135, 180, 0.08);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background: var(--glass-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .auth-panel h3 {
@@ -377,7 +382,7 @@ onUnmounted(() => {
   place-items: center;
   width: 2.8rem;
   height: 2.8rem;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: linear-gradient(135deg, #2563eb, #60a5fa);
   color: white;
   font-weight: 700;
@@ -409,44 +414,52 @@ onUnmounted(() => {
   display: inline-flex;
   width: 100%;
   padding: 0.2rem;
-  border-radius: 8px;
-  background: rgba(37, 99, 235, 0.08);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: var(--shadow-xs);
 }
 
 .auth-tab {
   flex: 1;
   padding: 0.5rem 0.85rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--app-text-soft);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    box-shadow var(--motion-fast);
 }
 
 .auth-tab--active {
-  background: var(--app-primary);
-  color: white;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--app-primary-dark);
   font-weight: 700;
+  box-shadow: var(--shadow-xs);
 }
 
 .auth-form input,
 .auth-select {
   padding: 0.8rem 0.9rem;
-  border: 1.5px solid var(--app-border);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.8);
+  border: 1.5px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.58);
   color: var(--app-heading);
   outline: none;
-  transition: all 0.2s ease;
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    background var(--motion-fast);
   font-size: inherit;
 }
 
 .auth-form input:focus,
 .auth-select:focus {
   border-color: var(--app-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-  background: white;
+  box-shadow: var(--focus-ring);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 .auth-select {
@@ -456,7 +469,7 @@ onUnmounted(() => {
 
 .form-status {
   padding: 0.72rem 0.85rem;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-size: 0.92rem;
 }
 
@@ -478,7 +491,7 @@ onUnmounted(() => {
   gap: 0.55rem;
   padding: 0.8rem 0.85rem;
   border: 1px dashed rgba(77, 141, 247, 0.28);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: rgba(244, 248, 255, 0.72);
 }
 
@@ -491,8 +504,8 @@ onUnmounted(() => {
   width: 100%;
   padding: 0.72rem 0.9rem;
   border: 1px solid rgba(77, 141, 247, 0.24);
-  border-radius: 999px;
-  background: white;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.72);
   color: var(--app-accent);
   font-weight: 700;
   cursor: pointer;
@@ -506,17 +519,22 @@ onUnmounted(() => {
 .primary-btn,
 .ghost-btn {
   padding: 0.78rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
 }
 
 .primary-btn {
   border: none;
   background: var(--app-primary);
   color: white;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  box-shadow: var(--shadow-primary);
 }
 
 .primary-btn:hover:not(:disabled) {
@@ -532,7 +550,7 @@ onUnmounted(() => {
 
 .ghost-btn {
   border: 1.5px solid var(--app-primary);
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-primary);
 }
 
@@ -554,9 +572,11 @@ onUnmounted(() => {
   position: relative;
   width: min(100%, 30rem);
   padding: 1.1rem 1rem 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 16px;
-  background: var(--app-surface-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--glass-surface-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.22);
 }
 
@@ -567,7 +587,7 @@ onUnmounted(() => {
   width: 2rem;
   height: 2rem;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--app-surface-soft);
   color: var(--app-text-soft);
   font-size: 0.95rem;
@@ -608,7 +628,7 @@ onUnmounted(() => {
 
 @media (max-width: 680px) {
   .auth-panel {
-    border-radius: 18px;
+    border-radius: var(--radius-xl);
   }
 
   .account-main {
@@ -626,7 +646,7 @@ onUnmounted(() => {
   }
 
   .intro-modal__card {
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
   }
 }
 </style>

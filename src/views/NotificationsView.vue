@@ -73,21 +73,21 @@ const notifications = computed(() => {
     .filter((post) =>
       post.authorId
         ? post.authorId === currentUser.id
-        : post.author === currentUser.name && post.role === currentUser.role
+        : post.author === currentUser.name && post.role === currentUser.role,
     )
     .flatMap((post) =>
       post.comments
         .filter((comment) =>
           comment.authorId
             ? comment.authorId !== currentUser.id
-            : comment.author !== currentUser.name || comment.role !== currentUser.role
+            : comment.author !== currentUser.name || comment.role !== currentUser.role,
         )
         .map((comment) => ({
           id: comment.id,
           createdAt: comment.createdAt,
           meta: uiStore.t('notificationReplyMeta'),
-          message: formatReplyMessage(comment)
-        }))
+          message: formatReplyMessage(comment),
+        })),
     )
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 })
@@ -97,9 +97,10 @@ const notifications = computed(() => {
 .page-panel {
   margin: 1rem;
   padding: 1.1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  background: var(--app-surface-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background: var(--glass-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .hero-panel h1 {

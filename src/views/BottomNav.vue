@@ -1,5 +1,5 @@
 <template>
-  <nav class="bottom-nav">
+  <nav class="bottom-nav" :aria-label="uiStore.t('appName')">
     <RouterLink
       v-for="item in items"
       :key="item.to"
@@ -19,49 +19,34 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
-import { preloadRouteComponent } from '@/router'
-import { useAuthStore } from '@/stores/auth'
-import { useMessagesStore } from '@/stores/messages'
+import { useAppNavigation } from '@/composables/useAppNavigation'
 import { useUiStore } from '@/stores/ui'
 
 const route = useRoute()
 const uiStore = useUiStore()
-const authStore = useAuthStore()
-const messagesStore = useMessagesStore()
-
-const items = computed(() => [
-  { to: '/', label: uiStore.t('navHome'), icon: 'H' },
-  { to: '/explore', label: uiStore.t('navExplore'), icon: '#' },
-  { to: '/notifications', label: uiStore.t('navNotifications'), icon: '!' },
-  {
-    to: '/messages',
-    label: uiStore.t('navMessages'),
-    icon: 'M',
-    badge: messagesStore.getUnreadThreadCount(authStore.currentUser?.id)
-  },
-  { to: '/profile', label: uiStore.t('navProfile'), icon: 'P' }
-])
-
-const warmRoute = (path) => {
-  void preloadRouteComponent(path)
-}
+const { navItems: items, warmRoute } = useAppNavigation()
 </script>
 
 <style scoped>
 .bottom-nav {
-  position: sticky;
-  bottom: 0;
+  position: fixed;
+  right: max(0.75rem, env(safe-area-inset-right));
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  left: max(0.75rem, env(safe-area-inset-left));
   z-index: 8;
   display: none;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.2rem;
-  padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.02);
+  width: min(34rem, calc(100vw - 1.5rem));
+  margin: 0 auto;
+  padding: 0.42rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+  background: var(--glass-surface-strong);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .bottom-nav__item {
@@ -70,19 +55,24 @@ const warmRoute = (path) => {
   align-items: center;
   justify-content: center;
   gap: 0.2rem;
+  min-height: 3.2rem;
   padding: 0.45rem 0.3rem;
-  border-radius: 8px;
+  border-radius: var(--radius-xl);
   color: var(--app-text-soft);
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
 }
 
 .bottom-nav__item:active {
-  transform: scale(0.95);
+  transform: scale(0.96);
 }
 
 .bottom-nav__item--active {
-  background: var(--app-accent-soft);
+  background: rgba(255, 255, 255, 0.82);
   color: var(--app-primary);
+  box-shadow: var(--shadow-xs);
 }
 
 .bottom-nav__item span {
@@ -101,7 +91,7 @@ const warmRoute = (path) => {
   min-width: 1rem;
   height: 1rem;
   padding: 0 0.22rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--app-primary);
   color: white;
   font-size: 0.65rem;
@@ -113,7 +103,8 @@ const warmRoute = (path) => {
 }
 
 @keyframes pulse-badge {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
     transform: scale(1);
   }

@@ -645,9 +645,10 @@ const handleDeletePost = async (postId) => {
 .page-panel {
   margin: 1rem;
   padding: 1.1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  background: var(--app-surface-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background: var(--glass-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .hero-panel h1 {
@@ -663,8 +664,8 @@ const handleDeletePost = async (postId) => {
 
 .insight-panel {
   background:
-    radial-gradient(circle at top right, rgba(107, 201, 255, 0.16), transparent 32%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(245, 249, 255, 0.94));
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(232, 244, 255, 0.62)),
+    var(--glass-surface);
 }
 
 .insight-panel__head,
@@ -716,7 +717,7 @@ const handleDeletePost = async (postId) => {
 .push-stream__count {
   flex-shrink: 0;
   padding: 0.32rem 0.6rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(79, 105, 206, 0.08);
   color: var(--app-primary-dark);
   font-size: 0.82rem;
@@ -734,9 +735,12 @@ const handleDeletePost = async (postId) => {
 .insight-card,
 .track-card {
   padding: 0.95rem 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: var(--shadow-xs);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
 }
 
 .insight-card small {
@@ -767,7 +771,7 @@ const handleDeletePost = async (postId) => {
 
 .topic-badge {
   padding: 0.42rem 0.66rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(79, 105, 206, 0.08);
   color: var(--app-primary-dark);
   font-size: 0.84rem;
@@ -789,9 +793,9 @@ const handleDeletePost = async (postId) => {
   flex-shrink: 0;
   min-height: 2.45rem;
   padding: 0.6rem 0.95rem;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-heading);
   font-weight: 700;
 }
@@ -801,8 +805,9 @@ const handleDeletePost = async (postId) => {
   flex-direction: column;
   gap: 0.75rem;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 255, 0.94));
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.04);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(242, 248, 255, 0.58)),
+    var(--glass-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .track-card--active,
@@ -857,7 +862,7 @@ const handleDeletePost = async (postId) => {
 .push-stream__ghost {
   min-height: 2.35rem;
   padding: 0.58rem 0.88rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.84rem;
   font-weight: 800;
   transition:
@@ -934,9 +939,9 @@ const handleDeletePost = async (postId) => {
   width: min(18rem, 100%);
   margin: 0.5rem auto 1rem;
   padding: 0.75rem 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
-  background: var(--app-surface-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-heading);
   font-weight: 700;
   transition: transform 120ms ease, box-shadow 120ms ease;
@@ -959,9 +964,9 @@ const handleDeletePost = async (postId) => {
   align-items: center;
   gap: 0.45rem;
   padding: 0.52rem 0.8rem;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.58);
   color: var(--app-text);
   font-size: 0.86rem;
   font-weight: 700;
@@ -969,13 +974,14 @@ const handleDeletePost = async (postId) => {
 
 .filter-chip--active {
   border-color: rgba(79, 105, 206, 0.22);
-  background: rgba(79, 105, 206, 0.08);
+  background: rgba(219, 234, 254, 0.74);
   color: var(--app-primary-dark);
+  box-shadow: var(--shadow-xs);
 }
 
 .filter-chip__count {
   padding: 0.16rem 0.38rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(79, 105, 206, 0.12);
   font-size: 0.72rem;
 }
@@ -986,8 +992,8 @@ const handleDeletePost = async (postId) => {
   flex-direction: column;
   overflow: hidden;
   background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 28%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.96));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(237, 246, 255, 0.64)),
+    var(--glass-surface);
 }
 
 .push-panel--expanded {
@@ -1016,7 +1022,7 @@ const handleDeletePost = async (postId) => {
   gap: 0.35rem;
   padding: 0.34rem 0.68rem;
   border: 1px solid rgba(37, 99, 235, 0.14);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.74);
   color: var(--app-primary-dark);
   font-size: 0.76rem;
@@ -1028,7 +1034,7 @@ const handleDeletePost = async (postId) => {
   content: '';
   width: 0.36rem;
   height: 0.36rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(135deg, #1d4ed8, #60a5fa);
 }
 
@@ -1037,7 +1043,7 @@ const handleDeletePost = async (postId) => {
   min-height: 2.25rem;
   padding: 0.5rem 0.86rem;
   border: 1px solid rgba(37, 99, 235, 0.2);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(37, 99, 235, 0.08);
   color: var(--app-primary-dark);
   font-size: 0.78rem;
@@ -1090,11 +1096,14 @@ const handleDeletePost = async (postId) => {
   gap: 0.85rem;
   padding: 0.9rem 0.95rem;
   border: 1px solid rgba(37, 99, 235, 0.12);
-  border-radius: 18px;
+  border-radius: var(--radius-xl);
   cursor: pointer;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(244, 248, 255, 0.96));
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.05);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(244, 248, 255, 0.66)),
+    var(--glass-surface);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
   transition:
     transform 170ms ease,
     border-color 170ms ease,
@@ -1108,7 +1117,7 @@ const handleDeletePost = async (postId) => {
   position: absolute;
   inset: 0 auto 0 0;
   width: 0.24rem;
-  border-radius: 18px 0 0 18px;
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
   background: var(--lane-gradient);
 }
 
@@ -1182,7 +1191,7 @@ const handleDeletePost = async (postId) => {
 .push-stream__dot {
   width: 0.72rem;
   height: 0.72rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--lane-gradient);
   box-shadow: 0 0 0 5px var(--lane-halo);
 }
@@ -1192,7 +1201,7 @@ const handleDeletePost = async (postId) => {
   flex: 1;
   min-height: 2.4rem;
   margin-top: 0.35rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(180deg, var(--lane-line), rgba(255, 255, 255, 0));
 }
 
@@ -1271,7 +1280,7 @@ const handleDeletePost = async (postId) => {
   position: relative;
   flex: 1;
   height: 0.4rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(15, 23, 42, 0.09);
   overflow: hidden;
 }

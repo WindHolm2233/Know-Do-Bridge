@@ -129,9 +129,11 @@ useSocialViewLifecycle(socialStore)
 
 const pageError = computed(() => socialStore.error)
 const postBoxKey = computed(() =>
-  [route.query.draftPreset || '', route.query.draftTopic || '', route.query.draftContent || ''].join(
-    '|'
-  )
+  [
+    route.query.draftPreset || '',
+    route.query.draftTopic || '',
+    route.query.draftContent || '',
+  ].join('|'),
 )
 const timelinePrimaryLabel = computed(() => (uiStore.locale === 'zh' ? '推荐' : 'For you'))
 const homeHighlights = computed(() => {
@@ -157,7 +159,7 @@ const homeHighlights = computed(() => {
 
   return [uiStore.t('homeCard1'), uiStore.t('homeCard2'), uiStore.t('homeCard3')].map((topic) => ({
     topic,
-    count: 0
+    count: 0,
   }))
 })
 const userPosts = computed(() => {
@@ -166,13 +168,14 @@ const userPosts = computed(() => {
   }
 
   return socialStore.posts.filter(
-    (post) => post.author === authStore.currentUser.name && post.role === authStore.currentUser.role
+    (post) =>
+      post.author === authStore.currentUser.name && post.role === authStore.currentUser.role,
   )
 })
 
 const userPostsCount = computed(() => userPosts.value.length)
 const userInteractionsCount = computed(() =>
-  userPosts.value.reduce((sum, post) => sum + post.likes, 0)
+  userPosts.value.reduce((sum, post) => sum + post.likes, 0),
 )
 
 const formatHighlightMeta = (count) => {
@@ -201,9 +204,10 @@ const handleDeletePost = async (postId) => {
 .timeline-panel,
 .trend-card {
   margin: 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  background: var(--app-surface-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background: var(--glass-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .home-overview {
@@ -249,8 +253,10 @@ const handleDeletePost = async (postId) => {
 
 .home-metric {
   padding: 0.95rem 1rem;
-  border-radius: 16px;
-  background: var(--app-surface-soft);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-xs);
 }
 
 .home-metric small {
@@ -351,11 +357,6 @@ const handleDeletePost = async (postId) => {
 
 .status-banner {
   margin: 0 1rem 1rem;
-  padding: 0.9rem 1rem;
-  border: 1px solid rgba(244, 33, 46, 0.16);
-  border-radius: 12px;
-  background: rgba(244, 33, 46, 0.08);
-  color: var(--app-danger);
 }
 
 @media (max-width: 680px) {

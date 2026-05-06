@@ -5,7 +5,7 @@
         {{ uiStore.t('appName') }}
       </RouterLink>
 
-      <nav class="rail-menu">
+      <nav class="rail-menu" :aria-label="uiStore.t('appName')">
         <RouterLink
           v-for="item in navItems"
           :key="item.to"
@@ -34,44 +34,29 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import BottomNav from './BottomNav.vue'
-import { preloadRouteComponent } from '@/router'
-import { useAuthStore } from '@/stores/auth'
-import { useMessagesStore } from '@/stores/messages'
+import { useAppNavigation } from '@/composables/useAppNavigation'
 import { useUiStore } from '@/stores/ui'
 
 const route = useRoute()
 const uiStore = useUiStore()
-const authStore = useAuthStore()
-const messagesStore = useMessagesStore()
-
-const navItems = computed(() => [
-  { to: '/', label: uiStore.t('navHome') },
-  { to: '/explore', label: uiStore.t('navExplore') },
-  { to: '/notifications', label: uiStore.t('navNotifications') },
-  {
-    to: '/messages',
-    label: uiStore.t('navMessages'),
-    badge: messagesStore.getUnreadThreadCount(authStore.currentUser?.id)
-  },
-  { to: '/profile', label: uiStore.t('navProfile') }
-])
-
-const warmRoute = (path) => {
-  void preloadRouteComponent(path)
-}
+const { navItems, warmRoute } = useAppNavigation()
 </script>
 
 <style scoped>
 .app-layout {
   display: grid;
-  grid-template-columns: minmax(160px, 200px) minmax(0, 900px) minmax(280px, 340px);
+  grid-template-columns:
+    minmax(176px, 216px)
+    minmax(0, var(--app-main-max))
+    minmax(var(--app-sidebar-min), var(--app-sidebar-max));
   justify-content: center;
-  width: min(100%, 1440px);
+  width: min(100%, var(--app-page-max));
   margin: 0 auto;
   min-height: 100vh;
+  gap: 0.75rem;
+  padding: 0 0.75rem;
 }
 
 .left-rail,
@@ -79,15 +64,18 @@ const warmRoute = (path) => {
   position: sticky;
   top: 0;
   align-self: start;
-  height: 100vh;
-  padding: 0.6rem 0.75rem;
+  height: calc(100vh - 1.5rem);
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
   overflow-y: auto;
 }
 
 .left-rail {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.8rem;
 }
 
 .brand-mark {
@@ -96,62 +84,68 @@ const warmRoute = (path) => {
   justify-content: center;
   width: fit-content;
   max-width: 100%;
-  min-height: 2.75rem;
-  padding: 0.6rem 0.9rem;
-  border-radius: 12px;
-  border: 2px solid var(--app-primary);
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(59, 130, 246, 0.05));
+  min-height: var(--control-height-md);
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-surface-strong);
   color: var(--app-primary-dark);
   font-size: 0.85rem;
   font-weight: 900;
   letter-spacing: 0.3px;
   line-height: 1;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
-  transition: all 0.3s ease;
+  box-shadow: var(--shadow-primary);
+  transition:
+    background var(--motion-base),
+    box-shadow var(--motion-base),
+    transform var(--motion-base);
 }
 
 .brand-mark:hover {
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(59, 130, 246, 0.1));
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
-  transform: translateY(-2px);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(219, 234, 254, 0.78));
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 .rail-menu {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.35rem;
 }
 
 .rail-item {
   position: relative;
   display: inline-flex;
   align-items: center;
-  width: fit-content;
+  width: 100%;
   min-height: 2.5rem;
-  padding: 0.65rem 0.9rem;
-  border-radius: 8px;
+  padding: 0.68rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
   color: var(--app-text);
   font-size: 0.95rem;
   font-weight: 600;
   transition:
-    background 0.25s ease,
-    color 0.25s ease,
-    transform 0.2s ease;
+    background var(--motion-base),
+    color var(--motion-base),
+    transform var(--motion-fast);
 }
 
 .rail-item:hover {
-  background: var(--app-accent-soft);
+  border-color: var(--glass-border);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-primary);
-  transform: translateX(2px);
+  box-shadow: var(--shadow-xs);
+  transform: translateX(1px);
 }
 
 .rail-item--active {
-  background: var(--app-accent-soft);
+  border-color: rgba(37, 99, 235, 0.2);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(219, 234, 254, 0.72));
   color: var(--app-primary);
   font-weight: 800;
-  border-left: 3px solid var(--app-primary);
-  padding-left: calc(0.9rem - 3px);
+  box-shadow: var(--shadow-primary);
 }
 
 .rail-badge {
@@ -161,7 +155,7 @@ const warmRoute = (path) => {
   min-width: 1.2rem;
   height: 1.2rem;
   padding: 0 0.32rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--app-primary);
   color: white;
   font-size: 0.7rem;
@@ -173,7 +167,8 @@ const warmRoute = (path) => {
 }
 
 @keyframes pulse-badge {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
     transform: scale(1);
   }
@@ -184,11 +179,15 @@ const warmRoute = (path) => {
 }
 
 .main-column {
-  min-height: 100vh;
-  background: var(--app-surface-elevated);
-  border-right: 1px solid var(--app-border);
-  border-left: 1px solid var(--app-border);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
+  min-height: calc(100vh - 1.5rem);
+  margin: 0.75rem 0;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+  background: rgba(255, 255, 255, 0.48);
+  box-shadow: var(--shadow-sm);
+  overflow: clip;
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
 }
 
 .right-rail {
@@ -201,6 +200,8 @@ const warmRoute = (path) => {
   .app-layout {
     grid-template-columns: minmax(0, 1fr);
     width: 100%;
+    gap: 0;
+    padding: 0;
   }
 
   .left-rail {
@@ -209,6 +210,8 @@ const warmRoute = (path) => {
 
   .main-column {
     min-height: auto;
+    margin: 0;
+    border-radius: 0;
     border-left: none;
     border-right: none;
   }
@@ -217,6 +220,9 @@ const warmRoute = (path) => {
     position: static;
     top: auto;
     height: auto;
+    margin-top: 0;
+    border: none;
+    border-radius: 0;
     padding: 0 0.75rem calc(1rem + env(safe-area-inset-bottom));
     overflow: visible;
   }

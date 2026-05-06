@@ -227,7 +227,7 @@ const handlePublish = () => {
   place-items: center;
   width: 2.8rem;
   height: 2.8rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(135deg, #8ba6ff, #6bc9ff);
   color: white;
   font-weight: 700;
@@ -286,18 +286,18 @@ const handlePublish = () => {
 .topic-input {
   width: 7.5rem;
   padding: 0.58rem 0.8rem;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
   outline: none;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.52);
   color: var(--app-heading);
 }
 
 .btn-publish {
   padding: 0.65rem 1.2rem;
   border: none;
-  border-radius: 999px;
-  background: var(--app-accent);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, var(--app-primary), var(--app-primary-light));
   color: white;
   font-weight: 700;
   cursor: pointer;
@@ -311,16 +311,16 @@ const handlePublish = () => {
 .assistant-card {
   margin-top: 0.9rem;
   padding: 0.95rem 1rem 1rem;
-  border: 1px solid rgba(79, 105, 206, 0.14);
-  border-radius: 18px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
   background:
-    radial-gradient(circle at top right, rgba(107, 201, 255, 0.14), transparent 28%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(245, 249, 255, 0.92));
+    linear-gradient(135deg, rgba(255, 255, 255, 0.82), rgba(230, 244, 255, 0.58)),
+    var(--glass-surface);
 }
 
 .assistant-card--empty {
   border-style: dashed;
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.42);
 }
 
 .assistant-card__header {
@@ -348,7 +348,7 @@ const handlePublish = () => {
 .assistant-card__score {
   flex-shrink: 0;
   padding: 0.45rem 0.7rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(79, 105, 206, 0.1);
   color: var(--app-primary);
   font-size: 0.85rem;
@@ -364,7 +364,7 @@ const handlePublish = () => {
 .assistant-meter {
   height: 0.5rem;
   margin-top: 0.8rem;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(79, 105, 206, 0.12);
   overflow: hidden;
 }
@@ -389,13 +389,13 @@ const handlePublish = () => {
 .assistant-tag,
 .assistant-hint,
 .assistant-topic {
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 0.88rem;
 }
 
 .assistant-tag {
   padding: 0.45rem 0.7rem;
-  background: white;
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-heading);
   border: 1px solid var(--app-border);
   font-weight: 700;
@@ -410,7 +410,7 @@ const handlePublish = () => {
 .assistant-topic {
   padding: 0.5rem 0.75rem;
   border: 1px solid rgba(79, 105, 206, 0.16);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-heading);
   cursor: pointer;
 }
@@ -431,7 +431,7 @@ const handlePublish = () => {
   margin-top: 0.85rem;
   padding: 0.65rem 0.95rem;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--app-primary);
   color: white;
   font-weight: 700;

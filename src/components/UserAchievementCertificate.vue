@@ -67,9 +67,7 @@
   <div v-else class="no-achievement">
     <p class="no-achievement__icon">✨</p>
     <p class="no-achievement__text">{{ uiStore.t('knowDoStarSubtitle') }}</p>
-    <p class="no-achievement__hint">
-      继续积极参与跨年级互动、分享经验，有机会获得知行之星称号！
-    </p>
+    <p class="no-achievement__hint">继续积极参与跨年级互动、分享经验，有机会获得知行之星称号！</p>
   </div>
 </template>
 
@@ -80,16 +78,16 @@ import { useUiStore } from '@/stores/ui'
 const props = defineProps({
   userId: {
     type: String,
-    required: true
+    required: true,
   },
   userMetrics: {
     type: Object,
-    default: null
+    default: null,
   },
   userStar: {
     type: Object,
-    default: null
-  }
+    default: null,
+  },
 })
 
 const emit = defineEmits(['share', 'download'])
@@ -100,7 +98,7 @@ const formatDate = (date) => {
   return new Intl.DateTimeFormat('zh-CN', {
     year: 'numeric',
     month: 'long',
-    day: 'numeric'
+    day: 'numeric',
   }).format(date)
 }
 
@@ -110,7 +108,7 @@ const handleShare = () => {
   if (navigator.share) {
     navigator.share({
       title: '知行之星证书',
-      text: text
+      text: text,
     })
   } else {
     // 降级方案：复制到剪贴板
@@ -131,21 +129,23 @@ const handleDownloadCertificate = () => {
 .achievement-card {
   padding: 2rem 1.5rem;
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(59, 130, 246, 0.03));
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   max-width: 600px;
   margin: 0 auto;
 }
 
 .card-container {
-  background: white;
-  border-radius: 12px;
+  background: var(--glass-surface-strong);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.1);
-  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+  transition:
+    transform var(--motion-base),
+    box-shadow var(--motion-base);
 }
 
 .card-container:hover {
-  box-shadow: 0 15px 40px rgba(37, 99, 235, 0.15);
+  box-shadow: var(--shadow-primary);
   transform: translateY(-2px);
 }
 
@@ -320,12 +320,15 @@ const handleDownloadCertificate = () => {
 .action-btn {
   padding: 0.8rem 1rem;
   border: 1.5px solid var(--app-primary);
-  border-radius: 8px;
-  background: white;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-primary);
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
   font-size: 0.9rem;
 }
 

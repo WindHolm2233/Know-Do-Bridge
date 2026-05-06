@@ -20,16 +20,16 @@ import { useUiStore } from '@/stores/ui'
 defineProps({
   title: {
     type: String,
-    default: ''
+    default: '',
   },
   subtitle: {
     type: String,
-    default: ''
+    default: '',
   },
   isLive: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
 
 const uiStore = useUiStore()
@@ -38,17 +38,20 @@ const uiStore = useUiStore()
 <style scoped>
 .app-header {
   position: sticky;
-  top: 0;
+  top: 0.75rem;
   z-index: 6;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  margin: 0.75rem;
   padding: 0.9rem 1rem;
-  border-bottom: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+  background: var(--glass-surface-strong);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .app-header__title h2 {
@@ -74,26 +77,32 @@ const uiStore = useUiStore()
 
 .live-pill {
   padding: 0.4rem 0.78rem;
-  border-radius: 6px;
-  background: rgba(15, 20, 25, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.52);
   color: var(--app-text-soft);
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.4px;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    box-shadow var(--motion-fast);
 }
 
 .live-pill--active {
-  background: var(--app-accent-soft);
+  background: rgba(219, 234, 254, 0.72);
   color: var(--app-primary);
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+  box-shadow: var(--shadow-xs);
 }
 
 @media (max-width: 680px) {
   .app-header {
     align-items: flex-start;
     flex-direction: column;
+    margin: 0.75rem;
     padding: 0.75rem 0.9rem;
+    border-radius: var(--radius-xl);
   }
 
   .app-header__title h2 {

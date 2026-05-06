@@ -79,7 +79,11 @@
         {{ uiStore.t('silverStar') }}
       </h3>
       <div class="stars-grid stars-grid--silver">
-        <article v-for="(star, idx) in leaderboard.silverStars" :key="star.userId" class="star-card star-card--silver">
+        <article
+          v-for="(star, idx) in leaderboard.silverStars"
+          :key="star.userId"
+          class="star-card star-card--silver"
+        >
           <div class="star-card__rank">{{ leaderboard.goldStars.length + idx + 1 }}</div>
           <div class="star-card__header">
             <div class="star-card__avatar">{{ star.userName.charAt(0) }}</div>
@@ -128,7 +132,11 @@
         {{ uiStore.t('bronzeStar') }}
       </h3>
       <div class="stars-list">
-        <article v-for="(star, idx) in leaderboard.bronzeStars" :key="star.userId" class="star-item">
+        <article
+          v-for="(star, idx) in leaderboard.bronzeStars"
+          :key="star.userId"
+          class="star-item"
+        >
           <div class="star-item__rank">
             {{ leaderboard.goldStars.length + leaderboard.silverStars.length + idx + 1 }}
           </div>
@@ -146,7 +154,10 @@
     </div>
 
     <!-- 空状态 -->
-    <div v-if="!leaderboard.goldStars && !leaderboard.silverStars && !leaderboard.bronzeStars" class="stars-empty">
+    <div
+      v-if="!leaderboard.goldStars && !leaderboard.silverStars && !leaderboard.bronzeStars"
+      class="stars-empty"
+    >
       <p class="stars-empty__icon">🌟</p>
       <p class="stars-empty__text">{{ uiStore.t('knowDoStarSubtitle') }}</p>
     </div>
@@ -161,12 +172,12 @@ import { generateKnowDoStarLeaderboard } from '@/utils/knowDoStarSystem'
 const props = defineProps({
   posts: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   comments: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 })
 
 const uiStore = useUiStore()
@@ -185,7 +196,7 @@ const leaderboard = computed(() => {
 .know-do-stars {
   padding: 2rem 1rem;
   background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(59, 130, 246, 0.03));
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
 }
 
 .stars-header {
@@ -217,12 +228,15 @@ const leaderboard = computed(() => {
 .period-tab {
   padding: 0.6rem 1.2rem;
   border: 2px solid var(--app-primary);
-  border-radius: 8px;
-  background: white;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-primary);
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
 }
 
 .period-tab:hover {
@@ -273,7 +287,10 @@ const leaderboard = computed(() => {
   border: 2px solid rgba(251, 191, 36, 0.2);
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
+  transition:
+    transform var(--motion-base),
+    box-shadow var(--motion-base),
+    border-color var(--motion-base);
   position: relative;
 }
 
@@ -406,12 +423,15 @@ const leaderboard = computed(() => {
   width: 100%;
   padding: 0.7rem;
   border: 1.5px solid var(--app-primary);
-  border-radius: 8px;
-  background: white;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-primary);
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast),
+    color var(--motion-fast),
+    transform var(--motion-fast);
 }
 
 .star-card__action:hover {
@@ -429,14 +449,16 @@ const leaderboard = computed(() => {
   align-items: center;
   gap: 1rem;
   padding: 0.9rem 1rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.6);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(37, 99, 235, 0.1);
-  transition: all 0.2s ease;
+  transition:
+    background var(--motion-fast),
+    border-color var(--motion-fast);
 }
 
 .star-item:hover {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.72);
   border-color: var(--app-primary);
 }
 

@@ -27,23 +27,25 @@ const uiStore = useUiStore()
 .language-switch {
   display: inline-flex;
   padding: 0.2rem;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.54);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.46);
+  box-shadow: var(--shadow-xs);
 }
 
 .language-switch__item {
+  min-height: 2rem;
   padding: 0.35rem 0.8rem;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: transparent;
   color: var(--app-text-soft);
   cursor: pointer;
 }
 
 .language-switch__item--active {
-  background: white;
-  color: var(--app-text);
-  box-shadow: 0 4px 12px rgba(58, 76, 110, 0.12);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--app-heading);
+  box-shadow: var(--shadow-xs);
 }
 </style>

@@ -358,7 +358,7 @@ const formatTime = (value) => {
   width: 2.6rem;
   height: 2.6rem;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(135deg, #8ba6ff, #6bc9ff);
   color: white;
   font-weight: 700;
@@ -380,10 +380,10 @@ const formatTime = (value) => {
   z-index: 4;
   width: 15rem;
   padding: 0.9rem;
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  background: white;
-  box-shadow: 0 20px 40px rgba(79, 105, 158, 0.18);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background: var(--glass-surface-strong);
+  box-shadow: var(--shadow-md);
 }
 
 .mini-profile-card__head {
@@ -415,8 +415,8 @@ const formatTime = (value) => {
   margin-top: 0.85rem;
   padding: 0.72rem 0.9rem;
   border: none;
-  border-radius: 999px;
-  background: var(--app-accent);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, var(--app-primary), var(--app-primary-light));
   color: white;
   font-weight: 700;
   cursor: pointer;
@@ -425,7 +425,7 @@ const formatTime = (value) => {
 .mini-profile-card__btn--ghost {
   margin-top: 0.55rem;
   border: 1px solid var(--app-border);
-  background: white;
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-heading);
 }
 
@@ -469,7 +469,7 @@ const formatTime = (value) => {
 .post-card__delete {
   padding: 0.42rem 0.72rem;
   border: 1px solid rgba(216, 91, 115, 0.18);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(216, 91, 115, 0.08);
   color: #c04d66;
   font-size: 0.78rem;
@@ -555,9 +555,9 @@ const formatTime = (value) => {
   flex: 1;
   min-width: 0;
   padding: 0.72rem 0.9rem;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.52);
   color: var(--app-heading);
   outline: none;
 }
@@ -565,8 +565,8 @@ const formatTime = (value) => {
 .comment-form button {
   padding: 0.7rem 1rem;
   border: none;
-  border-radius: 999px;
-  background: var(--app-accent);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(135deg, var(--app-primary), var(--app-primary-light));
   color: white;
   font-weight: 700;
   cursor: pointer;

@@ -239,9 +239,10 @@ const startChat = () => {
 .profile-panel,
 .profile-sidecard {
   margin: 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 20px;
-  background: var(--app-surface-elevated);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background: var(--glass-surface);
+  box-shadow: var(--shadow-sm);
 }
 
 .profile-hero {
@@ -252,8 +253,8 @@ const startChat = () => {
   gap: 1rem;
   padding: 1.2rem;
   background:
-    radial-gradient(circle at top right, rgba(107, 201, 255, 0.18), transparent 30%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(240, 247, 255, 0.92));
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(226, 241, 255, 0.62)),
+    var(--glass-surface);
 }
 
 .profile-hero__identity {
@@ -267,7 +268,7 @@ const startChat = () => {
   place-items: center;
   width: 5rem;
   height: 5rem;
-  border-radius: 1.6rem;
+  border-radius: var(--radius-lg);
   background: linear-gradient(135deg, #4f69ce, #6bc9ff);
   color: white;
   font-size: 1.8rem;
@@ -308,16 +309,17 @@ const startChat = () => {
 
 .profile-chip {
   padding: 0.55rem 0.85rem;
-  border-radius: 999px;
-  background: white;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--app-heading);
   font-size: 0.88rem;
   font-weight: 700;
 }
 
 .profile-chip--button {
-  border: none;
-  background: var(--app-accent);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  background: linear-gradient(135deg, var(--app-primary), var(--app-primary-light));
   color: white;
   cursor: pointer;
 }
@@ -331,9 +333,10 @@ const startChat = () => {
 
 .stat-card {
   padding: 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-card small {
@@ -378,7 +381,7 @@ const startChat = () => {
 
 .profile-sidecard {
   padding: 1rem;
-  box-shadow: 0 18px 40px rgba(111, 135, 180, 0.08);
+  box-shadow: var(--shadow-sm);
 }
 
 .side-list {
@@ -400,11 +403,6 @@ const startChat = () => {
 
 .status-banner {
   margin: 1rem 1rem 0;
-  padding: 0.9rem 1rem;
-  border: 1px solid rgba(216, 91, 115, 0.25);
-  border-radius: 12px;
-  background: rgba(216, 91, 115, 0.08);
-  color: var(--app-danger);
 }
 
 @media (max-width: 680px) {
