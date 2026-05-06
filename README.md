@@ -156,7 +156,7 @@ VITE_SUPABASE_DM_CHANNEL=realtime:campus-direct-messages
 
 ## 品牌信息
 
-- 网站标签名：`途择`
+- 网站标签名：`知行桥`
 - favicon：`public/favicon.svg`
 
 ## 常用文件
